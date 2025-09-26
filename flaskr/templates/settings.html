@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Novelv</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <style>
+        .settings-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--space-lg);
+        }
+        
+        .settings-header {
+            text-align: center;
+            margin-bottom: var(--space-xl);
+        }
+        
+        .settings-title {
+            font-family: var(--font-serif);
+            font-size: var(--text-3xl);
+            color: var(--text-primary);
+            margin-bottom: var(--space-sm);
+        }
+        
+        .settings-description {
+            color: var(--text-secondary);
+            font-size: var(--text-lg);
+        }
+        
+        .settings-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--neutral-300);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-lg);
+        }
+        
+        .section-title {
+            font-family: var(--font-serif);
+            font-size: var(--text-xl);
+            color: var(--text-primary);
+            margin-bottom: var(--space-md);
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+        
+        .section-content {
+            color: var(--text-secondary);
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-md);
+            margin: var(--space-md) 0;
+        }
+        
+        .status-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--neutral-300);
+            border-radius: var(--radius-md);
+            padding: var(--space-md);
+            text-align: center;
+        }
+        
+        .status-icon {
+            font-size: 2rem;
+            margin-bottom: var(--space-sm);
+        }
+        
+        .status-label {
+            font-size: var(--text-sm);
+            color: var(--text-secondary);
+            margin-bottom: var(--space-xs);
+        }
+        
+        .status-value {
+            font-size: var(--text-lg);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .cache-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--space-md);
+        }
+        
+        .cache-table th,
+        .cache-table td {
+            padding: var(--space-sm) var(--space-md);
+            text-align: left;
+            border-bottom: 1px solid var(--neutral-300);
+        }
+        
+        .cache-table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .cache-table td {
+            color: var(--text-secondary);
+        }
+        
+        .anki-form {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-md);
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-xs);
+        }
+        
+        .form-label {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+        
+        .form-select {
+            padding: var(--space-sm) var(--space-md);
+            border: 1px solid var(--neutral-300);
+            border-radius: var(--radius-md);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: var(--text-sm);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: var(--space-xl);
+            color: var(--text-muted);
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: var(--space-md);
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <a href="{{ url_for('home') }}" class="logo">
+                    Novelv
+                </a>
+                
+                <nav class="nav-links">
+                    <a href="{{ url_for('home') }}" class="nav-link">Library</a>
+                    <a href="{{ url_for('settings') }}" class="nav-link active">Settings</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="settings-container">
+        <!-- Header -->
+        <div class="settings-header">
+            <h1 class="settings-title">⚙️ Settings</h1>
+            <p class="settings-description">Manage your Anki integration and vocabulary caches</p>
+        </div>
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'error' if category == 'error' else 'success' if category == 'success' else 'info' }} animate-fade-in">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- System Status -->
+        <section class="settings-section">
+            <h2 class="section-title">
+                <span>📊</span>
+                System Status
+            </h2>
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-icon" id="yomitan-icon">⏳</div>
+                    <div class="status-label">Yomitan API</div>
+                    <div class="status-value" id="yomitan-status">Checking...</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-icon" id="anki-icon">⏳</div>
+                    <div class="status-label">Anki Connect</div>
+                    <div class="status-value" id="anki-status">Checking...</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-icon">💾</div>
+                    <div class="status-label">Vocabulary Caches</div>
+                    <div class="status-value">{{ cache_info|length }}</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Anki Integration -->
+        <section class="settings-section">
+            <h2 class="section-title">
+                <span>🃏</span>
+                Anki Integration
+            </h2>
+            <div class="section-content">
+                {% if anki_connected %}
+                    <form method="post" action="{{ url_for('select_field') }}" class="anki-form">
+                        <div class="form-group">
+                            <label for="note_type" class="form-label">Select Note Type:</label>
+                            <select name="note_type" id="note_type" class="form-select" required>
+                                <option value="">Choose a note type...</option>
+                                {% for note_type in note_types %}
+                                    <option value="{{ note_type }}">{{ note_type }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            ➕ Add Note Type
+                        </button>
+                    </form>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">❌</div>
+                        <p><strong>Anki is not connected</strong></p>
+                        <p>Please make sure Anki is running with the AnkiConnect plugin installed.</p>
+                        <button onclick="window.location.reload()" class="btn btn-secondary mt-md">
+                            🔄 Retry Connection
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+
+        <!-- Vocabulary Caches -->
+        <section class="settings-section">
+            <h2 class="section-title">
+                <span>📚</span>
+                Vocabulary Caches
+            </h2>
+            <div class="section-content">
+                {% if cache_info %}
+                    <table class="cache-table">
+                        <thead>
+                            <tr>
+                                <th>Note Type</th>
+                                <th>Field Name</th>
+                                <th>Total Cards</th>
+                                <th>Last Updated</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for cache in cache_info %}
+                                <tr>
+                                    <td>{{ cache.note_type }}</td>
+                                    <td>{{ cache.field_name }}</td>
+                                    <td>{{ cache.total_cards }}</td>
+                                    <td>{{ cache.last_updated }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📁</div>
+                        <p><strong>No vocabulary caches found</strong></p>
+                        <p>Add a note type above to create your first vocabulary cache.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Check system status
+        async function checkSystemStatus() {
+            // Check Yomitan
+            try {
+                const yomitanResponse = await fetch('/health/yomitan');
+                const yomitanData = await yomitanResponse.json();
+                
+                const yomitanIcon = document.getElementById('yomitan-icon');
+                const yomitanStatus = document.getElementById('yomitan-status');
+                
+                if (yomitanResponse.ok && yomitanData.healthy) {
+                    yomitanIcon.textContent = '✅';
+                    yomitanStatus.textContent = 'Online';
+                    yomitanStatus.style.color = 'var(--accent-success)';
+                } else {
+                    yomitanIcon.textContent = '❌';
+                    yomitanStatus.textContent = 'Offline';
+                    yomitanStatus.style.color = 'var(--accent-error)';
+                }
+            } catch (error) {
+                document.getElementById('yomitan-icon').textContent = '❌';
+                document.getElementById('yomitan-status').textContent = 'Offline';
+                document.getElementById('yomitan-status').style.color = 'var(--accent-error)';
+            }
+
+            // Check Anki
+            try {
+                const ankiResponse = await fetch('/health/anki');
+                const ankiData = await ankiResponse.json();
+                
+                const ankiIcon = document.getElementById('anki-icon');
+                const ankiStatus = document.getElementById('anki-status');
+                
+                if (ankiResponse.ok && ankiData.healthy) {
+                    ankiIcon.textContent = '✅';
+                    ankiStatus.textContent = 'Online';
+                    ankiStatus.style.color = 'var(--accent-success)';
+                } else {
+                    ankiIcon.textContent = '❌';
+                    ankiStatus.textContent = 'Offline';
+                    ankiStatus.style.color = 'var(--accent-error)';
+                }
+            } catch (error) {
+                document.getElementById('anki-icon').textContent = '❌';
+                document.getElementById('anki-status').textContent = 'Offline';
+                document.getElementById('anki-status').style.color = 'var(--accent-error)';
+            }
+        }
+
+        // Check status on load
+        document.addEventListener('DOMContentLoaded', checkSystemStatus);
+    </script>
+</body>
+</html>

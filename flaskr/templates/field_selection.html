@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Field - Novelv</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <style>
+        body {
+            background: var(--bg-primary);
+            max-width: 800px;
+            margin: 0 auto;
+            padding: var(--space-xl);
+        }
+        .container {
+            background: var(--bg-elevated);
+            padding: var(--space-2xl);
+            border-radius: var(--radius-xl);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            color: var(--text-primary);
+            text-align: center;
+            margin-bottom: var(--space-2xl);
+            font-size: var(--text-3xl);
+            font-weight: 700;
+        }
+        .note-type-info {
+            background: var(--bg-secondary);
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-xl);
+            text-align: center;
+            color: var(--text-primary);
+        }
+        .form-group {
+            margin-bottom: var(--space-lg);
+        }
+        label {
+            display: block;
+            margin-bottom: var(--space-sm);
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: var(--text-base);
+        }
+        select {
+            width: 100%;
+            padding: var(--space-md);
+            border: 2px solid var(--neutral-400);
+            border-radius: var(--radius-md);
+            font-size: var(--text-base);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        select:focus {
+            border-color: var(--accent-primary);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+        .btn {
+            background: var(--accent-primary);
+            color: white;
+            padding: var(--space-md) var(--space-xl);
+            border: none;
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-size: var(--text-base);
+            font-weight: 600;
+            margin-right: var(--space-sm);
+            transition: all 0.2s ease;
+        }
+        .btn:hover {
+            background: var(--primary-600);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+        }
+        .btn-secondary {
+            background: var(--neutral-600);
+        }
+        .btn-secondary:hover {
+            background: var(--neutral-700);
+        }
+        .btn-success {
+            background: var(--accent-success);
+        }
+        .btn-success:hover {
+            background: var(--success-700);
+        }
+        .btn-warning {
+            background: var(--accent-warning);
+            color: var(--warning-900);
+        }
+        .btn-warning:hover {
+            background: var(--warning-600);
+        }
+        .existing-cache {
+            background: var(--accent-success);
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+            margin-bottom: var(--space-lg);
+            border: 1px solid var(--success-600);
+        }
+        .existing-cache h3 {
+            margin-top: 0;
+            color: var(--success-900);
+            color: #155724;
+        }
+        .cache-item {
+            background-color: #f8f9fa;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 3px;
+            border-left: 3px solid #28a745;
+        }
+        .action-section {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 25px;
+        }
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .action-description {
+            margin-bottom: 15px;
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Select Field to Extract</h1>
+        
+        <div class="note-type-info">
+            <strong>Selected Note Type:</strong> {{ note_type }}
+        </div>
+
+        {% if existing_caches %}
+            <div class="existing-cache">
+                <h3>📁 Existing Cache Found</h3>
+                <p>You already have cached data for the following fields in this note type:</p>
+                {% for cache_field in existing_caches %}
+                    <div class="cache-item">{{ cache_field }}</div>
+                {% endfor %}
+                <p><em>You can update existing cache or create new ones below.</em></p>
+            </div>
+        {% endif %}
+
+        <form method="POST" action="{{ url_for('process_data') }}">
+            <input type="hidden" name="note_type" value="{{ note_type }}">
+            
+            <div class="form-group">
+                <label for="field">Select Field to Extract:</label>
+                <select id="field" name="field" required>
+                    <option value="">-- Choose a Field --</option>
+                    {% for field in fields %}
+                        <option value="{{ field }}">{{ field }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="action-section">
+                <h3>Choose Action:</h3>
+                
+                <div class="form-group">
+                    <input type="radio" id="action_update" name="action" value="update" checked>
+                    <label for="action_update" style="display: inline; margin-left: 8px; font-weight: normal;">
+                        <strong>Incremental Update</strong> (Recommended)
+                    </label>
+                    <div class="action-description">
+                        Only fetch cards that have been modified since the last update. Fast and efficient.
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <input type="radio" id="action_refresh" name="action" value="full_refresh">
+                    <label for="action_refresh" style="display: inline; margin-left: 8px; font-weight: normal;">
+                        <strong>Full Refresh</strong>
+                    </label>
+                    <div class="action-description">
+                        Re-fetch all cards from Anki. Use this if you suspect the cache is corrupted or incomplete.
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <input type="radio" id="action_load" name="action" value="load_only">
+                    <label for="action_load" style="display: inline; margin-left: 8px; font-weight: normal;">
+                        <strong>Load from Cache Only</strong>
+                    </label>
+                    <div class="action-description">
+                        Use existing cached data without updating. Very fast, but may be outdated.
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 30px; text-align: center;">
+                <button type="submit" class="btn btn-success">Process Data</button>
+                <a href="{{ url_for('home') }}" class="btn btn-secondary">← Back to Note Types</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

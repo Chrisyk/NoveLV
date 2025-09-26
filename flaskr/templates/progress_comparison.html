@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Progress Comparison - Novel Analyzer</title>
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --success-color: #059669;
+            --warning-color: #d97706;
+            --error-color: #dc2626;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: var(--gray-800);
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0 0 0.5rem 0;
+        }
+
+        .subtitle {
+            color: var(--gray-600);
+            font-size: 1.1rem;
+        }
+
+        .progress-chart {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .chart-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        .timeline {
+            position: relative;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: var(--gray-200);
+        }
+
+        .timeline-item {
+            position: relative;
+            padding-left: 60px;
+            margin-bottom: 2rem;
+        }
+
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 12px;
+            top: 8px;
+            width: 16px;
+            height: 16px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            border: 4px solid white;
+            box-shadow: 0 0 0 2px var(--primary-color);
+        }
+
+        .timeline-content {
+            background: white;
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .scan-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .filename {
+            font-weight: 600;
+            color: var(--gray-800);
+            font-size: 1.1rem;
+        }
+
+        .timestamp {
+            color: var(--gray-500);
+            font-size: 0.875rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: var(--gray-200);
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 1rem 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+            background: linear-gradient(90deg, var(--error-color), var(--warning-color), var(--success-color));
+        }
+
+        .progress-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .progress-stat {
+            text-align: center;
+            padding: 0.75rem;
+            background: var(--gray-50);
+            border-radius: 6px;
+        }
+
+        .stat-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            margin-top: 0.25rem;
+        }
+
+        .comprehension-rate {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .rate-excellent { color: var(--success-color); }
+        .rate-good { color: #059669; }
+        .rate-fair { color: var(--warning-color); }
+        .rate-poor { color: var(--error-color); }
+
+        .improvement-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            padding: 0.25rem 0.5rem;
+            border-radius: 20px;
+        }
+
+        .improvement-up {
+            background: rgba(34, 197, 94, 0.2);
+            color: #059669;
+        }
+
+        .improvement-down {
+            background: rgba(239, 68, 68, 0.2);
+            color: #dc2626;
+        }
+
+        .improvement-same {
+            background: var(--gray-200);
+            color: var(--gray-600);
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .summary-title {
+            font-size: 0.875rem;
+            color: var(--gray-600);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .summary-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--gray-800);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--gray-500);
+        }
+
+        .empty-state h3 {
+            font-size: 1.5rem;
+            margin-bottom: 1rem;
+            color: var(--gray-600);
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4338ca;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📈 Progress Tracking</h1>
+            <p class="subtitle">See how your Japanese comprehension has improved over time</p>
+        </div>
+
+        {% if comparisons %}
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+            <div class="summary-card">
+                <div class="summary-title">Total Scans</div>
+                <div class="summary-value">{{ comparisons|length }}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Latest Comprehension</div>
+                <div class="summary-value 
+                    {% if comparisons[0].comprehension_rate >= 90 %}rate-excellent
+                    {% elif comparisons[0].comprehension_rate >= 70 %}rate-good
+                    {% elif comparisons[0].comprehension_rate >= 50 %}rate-fair
+                    {% else %}rate-poor{% endif %}">
+                    {{ "%.1f"|format(comparisons[0].comprehension_rate) }}%
+                </div>
+            </div>
+            {% if comparisons|length >= 2 %}
+            <div class="summary-card">
+                <div class="summary-title">Improvement</div>
+                <div class="summary-value">
+                    {% set improvement = comparisons[0].comprehension_rate - comparisons[1].comprehension_rate %}
+                    <span class="improvement-indicator 
+                        {% if improvement > 0 %}improvement-up
+                        {% elif improvement < 0 %}improvement-down
+                        {% else %}improvement-same{% endif %}">
+                        {% if improvement > 0 %}↗ +{{ "%.1f"|format(improvement) }}%
+                        {% elif improvement < 0 %}↘ {{ "%.1f"|format(improvement) }}%
+                        {% else %}→ No change{% endif %}
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Progress Timeline -->
+        <div class="progress-chart">
+            <div class="chart-header">
+                <h2 class="chart-title">Analysis History</h2>
+                <a href="{{ url_for('scan_history') }}" style="color: var(--gray-500); text-decoration: none;">View All Scans →</a>
+            </div>
+
+            <div class="timeline">
+                {% for comparison in comparisons %}
+                <div class="timeline-item">
+                    <div class="timeline-content">
+                        <div class="scan-meta">
+                            <div>
+                                <div class="filename">{{ comparison.filename or "Unknown File" }}</div>
+                                <div class="timestamp">{{ comparison.created_at }}</div>
+                            </div>
+                            {% if not loop.last %}
+                            {% set prev_rate = comparisons[loop.index].comprehension_rate %}
+                            {% set improvement = comparison.comprehension_rate - prev_rate %}
+                            <div class="improvement-indicator 
+                                {% if improvement > 0 %}improvement-up
+                                {% elif improvement < 0 %}improvement-down
+                                {% else %}improvement-same{% endif %}">
+                                {% if improvement > 0 %}↗ +{{ "%.1f"|format(improvement) }}%
+                                {% elif improvement < 0 %}↘ {{ "%.1f"|format(improvement) }}%
+                                {% else %}→ No change{% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="comprehension-rate 
+                            {% if comparison.comprehension_rate >= 90 %}rate-excellent
+                            {% elif comparison.comprehension_rate >= 70 %}rate-good
+                            {% elif comparison.comprehension_rate >= 50 %}rate-fair
+                            {% else %}rate-poor{% endif %}">
+                            {{ "%.1f"|format(comparison.comprehension_rate) }}% Comprehension
+                        </div>
+
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: {{ comparison.comprehension_rate }}%"></div>
+                        </div>
+
+                        <div class="progress-stats">
+                            <div class="progress-stat">
+                                <div class="stat-value">{{ comparison.total_words|number_format }}</div>
+                                <div class="stat-label">Total Words</div>
+                            </div>
+                            <div class="progress-stat">
+                                <div class="stat-value">{{ comparison.known_words_count|number_format }}</div>
+                                <div class="stat-label">Known</div>
+                            </div>
+                            <div class="progress-stat">
+                                <div class="stat-value">{{ comparison.unknown_words_count|number_format }}</div>
+                                <div class="stat-label">Unknown</div>
+                            </div>
+                            <div class="progress-stat">
+                                <div class="stat-value">{{ comparison.ignored_words_count|number_format }}</div>
+                                <div class="stat-label">Ignored</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>No Progress Data Yet</h3>
+            <p>You need at least one analysis to see your progress. Upload a text file and run an analysis to get started!</p>
+            <div style="margin-top: 2rem;">
+                <a href="{{ url_for('home') }}" class="btn btn-primary">Start Analyzing</a>
+            </div>
+        </div>
+        {% endif %}
+
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="{{ url_for('home') }}" style="color: var(--gray-500); text-decoration: none;">← Back to Home</a>
+        </div>
+    </div>
+</body>
+</html>

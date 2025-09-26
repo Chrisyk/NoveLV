@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anki Setup - Novelv</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            color: #333;
+            margin: 0;
+        }
+        
+        .status-box {
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+        
+        .form-group {
+            margin-bottom: 25px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        select {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 16px;
+            background: white;
+        }
+        
+        select:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            margin: 0 10px;
+            text-decoration: none;
+            display: inline-block;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+        }
+        
+        .actions {
+            text-align: center;
+            margin-top: 30px;
+        }
+        
+        .flash-messages {
+            margin-bottom: 20px;
+        }
+        
+        .flash-message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            font-weight: 500;
+        }
+        
+        .flash-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .flash-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .flash-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Anki Vocabulary Setup</h1>
+            <p>Set up your vocabulary cache to analyze Japanese texts</p>
+        </div>
+
+        <!-- Flash messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Connection Status -->
+        {% if anki_connected %}
+            <div class="status-box status-success">
+                ✅ Connected to Anki! Found {{ note_types|length }} note types.
+            </div>
+        {% else %}
+            <div class="status-box status-error">
+                ❌ Cannot connect to Anki. Please make sure:
+                <ul style="text-align: left; margin-top: 15px;">
+                    <li>Anki is running</li>
+                    <li>AnkiConnect add-on is installed</li>
+                    <li>AnkiConnect is enabled and accessible</li>
+                </ul>
+            </div>
+        {% endif %}
+
+        <!-- Cache Status -->
+        {% if cache_exists %}
+            <div class="status-box status-success">
+                📁 Existing vocabulary cache found! 
+                <br><a href="{{ url_for('cache_status') }}" style="color: #155724; font-weight: bold;">View Cache Status</a>
+            </div>
+        {% else %}
+            <div class="status-box status-warning">
+                📭 No vocabulary cache found. You'll need to create one first.
+            </div>
+        {% endif %}
+
+        <!-- Main Form -->
+        {% if anki_connected %}
+            <form method="POST" action="{{ url_for('select_field') }}">
+                <div class="form-group">
+                    <label for="note_type">Select Note Type:</label>
+                    <select id="note_type" name="note_type" required>
+                        <option value="">-- Choose a Note Type --</option>
+                        {% for note_type in note_types %}
+                            <option value="{{ note_type }}">{{ note_type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="actions">
+                    <button type="submit" class="btn btn-primary">Continue to Field Selection →</button>
+                    <a href="{{ url_for('home') }}" class="btn btn-secondary">← Back to Library</a>
+                </div>
+            </form>
+        {% else %}
+            <div class="actions">
+                <p style="color: #666;">Please fix the Anki connection issue above to continue.</p>
+                <a href="{{ url_for('home') }}" class="btn btn-secondary">← Back to Library</a>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>

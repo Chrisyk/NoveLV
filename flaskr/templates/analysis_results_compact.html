@@ -1,0 +1,967 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analysis: {{ filename }} - Novelv</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <style>
+        /* Compact Analysis Results Styles */
+        .compact-header {
+            background: var(--bg-elevated);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--neutral-300);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: var(--space-md) 0;
+        }
+        
+        .compact-header h1 {
+            font-family: var(--font-system);
+            font-size: var(--text-xl);
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .back-link {
+            color: var(--accent-primary);
+            text-decoration: none;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-xs);
+            margin-bottom: var(--space-sm);
+        }
+        
+        .back-link:hover {
+            color: var(--primary-700);
+        }
+        
+        /* Main Stats Card */
+        .main-stats {
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(168, 85, 247, 0.1));
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            margin: var(--space-lg) 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: var(--space-lg);
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: var(--text-2xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: var(--text-sm);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: var(--space-xs);
+        }
+        
+        .difficulty-badge {
+            background: var(--accent-primary);
+            color: white;
+            padding: var(--space-xs) var(--space-md);
+            border-radius: var(--radius-full);
+            font-weight: 600;
+            font-size: var(--text-sm);
+        }
+        
+        /* Quick Overview Grid */
+        .overview-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: var(--space-lg);
+            margin: var(--space-lg) 0;
+        }
+        
+        .word-breakdown {
+            background: var(--bg-elevated);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            border: 1px solid var(--neutral-300);
+        }
+        
+        .word-breakdown h3 {
+            margin: 0 0 var(--space-md) 0;
+            font-size: var(--text-lg);
+            color: var(--text-primary);
+        }
+        
+        .word-counts {
+            display: flex;
+            gap: var(--space-md);
+            margin-bottom: var(--space-lg);
+        }
+        
+        .word-count-item {
+            flex: 1;
+            text-align: center;
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+        }
+        
+        .known-count {
+            background: rgba(34, 197, 94, 0.1);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .ignored-count {
+            background: rgba(107, 114, 128, 0.1);
+            border: 1px solid rgba(107, 114, 128, 0.3);
+        }
+        
+        .unknown-count {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .word-count-number {
+            font-size: var(--text-xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            display: block;
+        }
+        
+        .word-count-label {
+            font-size: var(--text-sm);
+            color: var(--text-secondary);
+            margin-top: var(--space-xs);
+        }
+        
+        /* Star Distribution */
+        .star-distribution {
+            background: var(--bg-elevated);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            border: 1px solid var(--neutral-300);
+        }
+        
+        .star-distribution h3 {
+            margin: 0 0 var(--space-md) 0;
+            font-size: var(--text-lg);
+            color: var(--text-primary);
+        }
+        
+        .star-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-xs) 0;
+            border-bottom: 1px solid var(--neutral-300);
+        }
+        
+        .star-item:last-child {
+            border-bottom: none;
+        }
+        
+        .star-label {
+            font-size: var(--text-sm);
+            color: var(--text-secondary);
+        }
+        
+        .star-count {
+            font-weight: 600;
+            color: var(--text-primary);
+            background: rgba(99, 102, 241, 0.2);
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-md);
+            font-size: var(--text-sm);
+        }
+        
+        /* Three-Category Summary */
+        .category-summary {
+            display: flex;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-md);
+        }
+        
+        .category-item {
+            flex: 1;
+            text-align: center;
+            padding: var(--space-sm);
+            border-radius: var(--radius-md);
+            border: 2px solid;
+        }
+        
+        .known-category {
+            background: rgba(34, 197, 94, 0.1);
+            border-color: #22c55e;
+            color: #16a34a;
+        }
+        
+        .ignored-category {
+            background: rgba(107, 114, 128, 0.1);
+            border-color: #6b7280;
+            color: #4b5563;
+        }
+        
+        .unknown-category {
+            background: rgba(239, 68, 68, 0.1);
+            border-color: #ef4444;
+            color: #dc2626;
+        }
+        
+        .category-name {
+            display: block;
+            font-weight: 600;
+            font-size: var(--text-sm);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .category-count {
+            display: block;
+            font-weight: 700;
+            font-size: var(--text-lg);
+            margin-top: var(--space-xs);
+        }
+        
+        /* Sort Controls */
+        .sort-controls {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            margin-bottom: var(--space-md);
+            padding: var(--space-sm) var(--space-md);
+            background: var(--bg-elevated);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--neutral-300);
+        }
+        
+        .sort-controls label {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: var(--text-sm);
+        }
+        
+        .sort-controls select {
+            padding: var(--space-xs) var(--space-sm);
+            border: 1px solid var(--neutral-400);
+            border-radius: var(--radius-sm);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: var(--text-sm);
+            cursor: pointer;
+        }
+        
+        .sort-controls select:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+        }
+        
+        /* Star Rating Display */
+        .star-rating {
+            font-size: var(--text-xs);
+            color: #f59e0b;
+            font-weight: 600;
+            margin-left: var(--space-xs);
+            min-width: 60px;
+            text-align: right;
+        }
+        
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: var(--space-md);
+            margin: var(--space-lg) 0;
+            flex-wrap: wrap;
+        }
+        
+        .action-button {
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            padding: var(--space-md) var(--space-lg);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 500;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-xs);
+            transition: all var(--transition-fast);
+        }
+        
+        .action-button:hover {
+            background: var(--primary-600);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .action-button.secondary {
+            background: var(--neutral-500);
+        }
+        
+        .action-button.secondary:hover {
+            background: var(--neutral-600);
+        }
+        
+        /* Expandable Word Lists */
+        .expandable-section {
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--neutral-200);
+            margin: var(--space-lg) 0;
+        }
+        
+        .expandable-header {
+            padding: var(--space-lg);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--neutral-200);
+        }
+        
+        .expandable-header:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+        
+        .expandable-title {
+            font-size: var(--text-lg);
+            font-weight: 600;
+            color: var(--neutral-800);
+            margin: 0;
+        }
+        
+        .expand-icon {
+            width: 20px;
+            height: 20px;
+            transition: transform var(--transition-fast);
+        }
+        
+        .expandable-content {
+            display: none;
+            padding: var(--space-lg);
+        }
+        
+        .expandable-content.expanded {
+            display: block;
+        }
+        
+        .expanded .expand-icon {
+            transform: rotate(90deg);
+        }
+        
+        .word-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: var(--space-md);
+        }
+        
+        .word-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: var(--space-sm) var(--space-md);
+            background: rgba(99, 102, 241, 0.05);
+            border-radius: var(--radius-md);
+            border: 1px solid rgba(99, 102, 241, 0.1);
+            transition: all 0.2s ease;
+            cursor: pointer;
+            user-select: none;
+        }
+        
+        .word-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+        
+        .word-item:active {
+            transform: translateY(0);
+        }
+        
+        /* Star-based background colors (red to green gradient) */
+        .word-item.star-5 {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.08));
+            border-color: rgba(16, 185, 129, 0.3);
+        }
+        
+        .word-item.star-4 {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(34, 197, 94, 0.06));
+            border-color: rgba(34, 197, 94, 0.25);
+        }
+        
+        .word-item.star-3 {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(251, 191, 36, 0.06));
+            border-color: rgba(251, 191, 36, 0.3);
+        }
+        
+        .word-item.star-2 {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.12), rgba(245, 158, 11, 0.06));
+            border-color: rgba(245, 158, 11, 0.3);
+        }
+        
+        .word-item.star-1 {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.06));
+            border-color: rgba(239, 68, 68, 0.25);
+        }
+        
+        .word-item.star-0 {
+            background: linear-gradient(135deg, rgba(107, 114, 128, 0.12), rgba(107, 114, 128, 0.06));
+            border-color: rgba(107, 114, 128, 0.25);
+        }
+        
+        /* Star-based hover effects */
+        .word-item.star-5:hover {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(16, 185, 129, 0.15));
+            border-color: rgba(16, 185, 129, 0.4);
+        }
+        
+        .word-item.star-4:hover {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.22), rgba(34, 197, 94, 0.12));
+            border-color: rgba(34, 197, 94, 0.35);
+        }
+        
+        .word-item.star-3:hover {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.22), rgba(251, 191, 36, 0.12));
+            border-color: rgba(251, 191, 36, 0.4);
+        }
+        
+        .word-item.star-2:hover {
+            background: linear-gradient(135deg, rgba(245, 158, 11, 0.22), rgba(245, 158, 11, 0.12));
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+        
+        .word-item.star-1:hover {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.22), rgba(239, 68, 68, 0.12));
+            border-color: rgba(239, 68, 68, 0.35);
+        }
+        
+        .word-item.star-0:hover {
+            background: linear-gradient(135deg, rgba(107, 114, 128, 0.22), rgba(107, 114, 128, 0.12));
+            border-color: rgba(107, 114, 128, 0.35);
+        }
+        
+        .word-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .word-info {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+        }
+        
+        .word-text {
+            font-weight: 500;
+            color: var(--neutral-800);
+        }
+        
+        .word-count {
+            background: rgba(99, 102, 241, 0.2);
+            color: var(--indigo-700);
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-full);
+            font-size: var(--text-xs);
+            font-weight: 600;
+        }
+        
+        .ignore-btn {
+            background: var(--neutral-500);
+            color: white;
+            border: none;
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            font-size: var(--text-xs);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .ignore-btn:hover {
+            background: var(--neutral-600);
+        }
+        
+        .ignore-btn:disabled {
+            background: var(--success-500);
+            cursor: not-allowed;
+        }
+        
+        .ignore-btn.ignored {
+            background: var(--success-500);
+        }
+        
+        .unignore-btn {
+            background: var(--error-500);
+            color: white;
+            border: none;
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            font-size: var(--text-xs);
+            cursor: pointer;
+            transition: all var(--transition-fast);
+        }
+        
+        .unignore-btn:hover {
+            background: var(--error-600);
+        }
+        
+        .unignore-btn:disabled {
+            background: var(--neutral-400);
+            cursor: not-allowed;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: var(--space-md) var(--space-lg);
+            border-radius: var(--radius-md);
+            color: white;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        .notification-success {
+            background: var(--success-500);
+        }
+        
+        .notification-error {
+            background: var(--error-500);
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-stats {
+                grid-template-columns: 1fr;
+                gap: var(--space-md);
+            }
+            
+            .overview-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .word-counts {
+                flex-direction: column;
+                gap: var(--space-md);
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-wrapper">
+        <div class="container">
+            <div class="compact-header">
+                <a href="{{ url_for('home') }}" class="back-link">
+                    ← Back to Library
+                </a>
+                <h1>{{ filename }}</h1>
+                {% if not is_cached %}
+                <div style="text-align: center; margin-top: 0.5rem;">
+                    <small style="color: var(--success-600); background: rgba(34, 197, 94, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem;">
+                        ✅ Analysis saved to history
+                    </small>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Main Statistics -->
+            <div class="main-stats">
+                <div class="stat-item">
+                    <span class="stat-value">{{ "%.1f"|format(analysis.comprehension_rate) }}%</span>
+                    <div class="stat-label">Comprehension Rate</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value difficulty-badge">{{ analysis.difficulty_level }}</span>
+                    <div class="stat-label">Difficulty Level</div>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-value">{{ analysis.total_processed_words|number_format }}</span>
+                    <div class="stat-label">Words Analyzed</div>
+                </div>
+            </div>
+            
+            <!-- Quick Overview -->
+            <div class="overview-grid">
+                <div class="word-breakdown">
+                    <h3>Word Breakdown</h3>
+                    <div class="word-counts">
+                        <div class="word-count-item known-count">
+                            <span class="word-count-number">{{ analysis.known_word_count|number_format }}</span>
+                            <div class="word-count-label">Known Words</div>
+                        </div>
+                        <div class="word-count-item ignored-count">
+                            <span class="word-count-number">{{ analysis.ignored_word_count|number_format }}</span>
+                            <div class="word-count-label">Ignored Words</div>
+                        </div>
+                        <div class="word-count-item unknown-count">
+                            <span class="word-count-number">{{ analysis.unknown_word_count|number_format }}</span>
+                            <div class="word-count-label">Unknown Words</div>
+                        </div>
+                    </div>
+                    <div style="font-size: var(--text-sm); color: var(--neutral-600);">
+                        Total unique words: {{ analysis.unique_words|number_format }}<br>
+                        Raw tokens processed: {{ analysis.total_words|number_format }}
+                    </div>
+                </div>
+                
+                <div class="star-distribution">
+                    <h3>Three-Category Frequency Distribution</h3>
+                    
+                    <!-- Category Summary -->
+                    <div class="category-summary">
+                        <div class="category-item known-category">
+                            <span class="category-name">Known</span>
+                            <span class="category-count">{{ analysis.star_statistics.categories.known.total_instances }} words</span>
+                        </div>
+                        <div class="category-item ignored-category">
+                            <span class="category-name">Ignored</span>
+                            <span class="category-count">{{ analysis.star_statistics.categories.ignored.total_instances }} words</span>
+                        </div>
+                        <div class="category-item unknown-category">
+                            <span class="category-name">Unknown</span>
+                            <span class="category-count">{{ analysis.star_statistics.categories.unknown.total_instances }} words</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Combined Star Distribution -->
+                    <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--neutral-200);">
+                        <h4 style="margin: 0 0 var(--space-sm) 0; font-size: var(--text-sm); color: var(--neutral-600); text-transform: uppercase;">Overall Frequency Breakdown</h4>
+                        {% for star_level in [5, 4, 3, 2, 1, 0] %}
+                        {% set star_info = analysis.star_statistics.star_breakdown[star_level] %}
+                        {% if star_info.count > 0 %}
+                        <div class="star-item">
+                            <span class="star-label">{{ "★" * star_level if star_level > 0 else "No rating" }}</span>
+                            <span class="star-count">{{ star_info.count }}</span>
+                        </div>
+                        {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Action Buttons -->
+            <div class="action-buttons">
+                <a href="{{ url_for('analyze_novel', filename=filename) }}" class="action-button">
+                    📊 Full Highlighted Text
+                </a>
+                <button onclick="toggleExpandable('known-words')" class="action-button secondary">
+                    📝 View Known Words ({{ analysis.known_words|length }})
+                </button>
+                <button onclick="toggleExpandable('unknown-words')" class="action-button secondary">
+                    ❓ View Unknown Words ({{ analysis.unknown_words|length }})
+                </button>
+                <button onclick="toggleExpandable('ignored-words')" class="action-button secondary">
+                    🚫 View Ignored Words ({{ analysis.ignored_words|length }})
+                </button>
+            </div>
+            
+            <!-- Expandable Word Lists -->
+            <div id="known-words" class="expandable-section">
+                <div class="expandable-header" onclick="toggleExpandable('known-words')">
+                    <h3 class="expandable-title">Known Words ({{ analysis.known_words|length }})</h3>
+                    <svg class="expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </div>
+                <div class="expandable-content">
+                    <!-- Sort Controls -->
+                    <div class="sort-controls">
+                        <label>Sort by:</label>
+                        <select onchange="sortWords('known-words', this.value)">
+                            <option value="frequency">Frequency (Default)</option>
+                            <option value="stars">Star Rating</option>
+                            <option value="alphabetical">Alphabetical</option>
+                        </select>
+                    </div>
+                    <div class="word-grid" id="known-words-grid">
+                        {% for word_info in analysis.known_words %}
+                        <div class="word-item star-{{ word_info.rank | star_from_rank if word_info.rank else 0 }}" 
+                             data-word="{{ word_info.word }}" 
+                             data-frequency="{{ word_info.count }}" 
+                             data-stars="{{ word_info.rank | star_from_rank if word_info.rank else 0 }}"
+                             data-rank="{{ word_info.rank or 999999 }}"
+                             style="cursor: pointer;">
+                            <div class="word-info">
+                                <span class="star-rating">{{ (word_info.rank | star_from_rank) if word_info.rank else 0 }}★</span>
+                                <span class="word-text">{{ word_info.word }}</span>
+                                <span class="word-count">{{ word_info.count }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div id="unknown-words" class="expandable-section">
+                <div class="expandable-header" onclick="toggleExpandable('unknown-words')">
+                    <h3 class="expandable-title">Unknown Words ({{ analysis.unknown_words|length }})</h3>
+                    <svg class="expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </div>
+                <div class="expandable-content">
+                    <!-- Sort Controls -->
+                    <div class="sort-controls">
+                        <label>Sort by:</label>
+                        <select onchange="sortWords('unknown-words', this.value)">
+                            <option value="frequency">Frequency (Default)</option>
+                            <option value="stars">Star Rating</option>
+                            <option value="alphabetical">Alphabetical</option>
+                        </select>
+                    </div>
+                    <div class="word-grid" id="unknown-words-grid">
+                        {% for word_info in analysis.unknown_words %}
+                        <div class="word-item star-{{ word_info.rank | star_from_rank if word_info.rank else 0 }}" 
+                             data-word="{{ word_info.word }}" 
+                             data-frequency="{{ word_info.count }}" 
+                             data-stars="{{ word_info.rank | star_from_rank if word_info.rank else 0 }}"
+                             data-rank="{{ word_info.rank or 999999 }}"
+                             data-status="unknown"
+                             onclick="toggleWord('{{ word_info.word }}', this)"
+                             style="cursor: pointer;">
+                            <div class="word-info">
+                                <span class="star-rating">{{ (word_info.rank | star_from_rank) if word_info.rank else 0 }}★</span>
+                                <span class="word-text">{{ word_info.word }}</span>
+                                <span class="word-count">{{ word_info.count }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            
+            <div id="ignored-words" class="expandable-section">
+                <div class="expandable-header" onclick="toggleExpandable('ignored-words')">
+                    <h3 class="expandable-title">Ignored Words ({{ analysis.ignored_words|length }})</h3>
+                    <svg class="expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </div>
+                <div class="expandable-content">
+                    <!-- Sort Controls -->
+                    <div class="sort-controls">
+                        <label>Sort by:</label>
+                        <select onchange="sortWords('ignored-words', this.value)">
+                            <option value="frequency">Frequency (Default)</option>
+                            <option value="stars">Star Rating</option>
+                            <option value="alphabetical">Alphabetical</option>
+                        </select>
+                    </div>
+                    <div class="word-grid" id="ignored-words-grid">
+                        {% for word_info in analysis.ignored_words %}
+                        <div class="word-item star-{{ word_info.rank | star_from_rank if word_info.rank else 0 }}" 
+                             data-word="{{ word_info.word }}" 
+                             data-frequency="{{ word_info.count }}" 
+                             data-stars="{{ word_info.rank | star_from_rank if word_info.rank else 0 }}"
+                             data-rank="{{ word_info.rank or 999999 }}"
+                             data-status="ignored"
+                             onclick="toggleWord('{{ word_info.word }}', this)"
+                             style="cursor: pointer;">
+                            <div class="word-info">
+                                <span class="star-rating">{{ (word_info.rank | star_from_rank) if word_info.rank else 0 }}★</span>
+                                <span class="word-text">{{ word_info.word }}</span>
+                                <span class="word-count">{{ word_info.count }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        {% if analysis.ignored_words|length == 0 %}
+                        <div style="text-align: center; color: var(--neutral-600); padding: var(--space-lg); grid-column: 1/-1;">
+                            No ignored words yet.
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        function toggleExpandable(id) {
+            const section = document.getElementById(id);
+            const content = section.querySelector('.expandable-content');
+            const header = section.querySelector('.expandable-header');
+            
+            if (content.classList.contains('expanded')) {
+                content.classList.remove('expanded');
+                header.classList.remove('expanded');
+            } else {
+                content.classList.add('expanded');
+                header.classList.add('expanded');
+            }
+        }
+        
+        // Toggle word between ignored and unignored state
+        function toggleWord(word, cardElement) {
+            const currentStatus = cardElement.getAttribute('data-status');
+            
+            if (currentStatus === 'ignored') {
+                // If currently ignored, unignore it
+                unignoreWord(word, cardElement);
+            } else {
+                // If unknown or known, ignore it
+                ignoreWord(word, cardElement);
+            }
+        }
+        
+        // Word sorting functionality
+        function sortWords(sectionId, sortBy) {
+            const grid = document.getElementById(sectionId + '-grid');
+            const items = Array.from(grid.children).filter(item => item.classList.contains('word-item'));
+            
+            items.sort((a, b) => {
+                switch(sortBy) {
+                    case 'stars':
+                        const starsA = parseInt(a.dataset.stars) || 0;
+                        const starsB = parseInt(b.dataset.stars) || 0;
+                        // Sort by stars descending (5-star first), then by frequency
+                        if (starsA !== starsB) {
+                            return starsB - starsA;
+                        }
+                        return parseInt(b.dataset.frequency) - parseInt(a.dataset.frequency);
+                        
+                    case 'alphabetical':
+                        return a.dataset.word.localeCompare(b.dataset.word);
+                        
+                    case 'frequency':
+                    default:
+                        return parseInt(b.dataset.frequency) - parseInt(a.dataset.frequency);
+                }
+            });
+            
+            // Clear the grid and re-append sorted items
+            items.forEach(item => grid.removeChild(item));
+            items.forEach(item => grid.appendChild(item));
+            
+            // Keep any non-word-item elements (like empty state messages) at the end
+            const nonWordItems = Array.from(grid.children).filter(item => !item.classList.contains('word-item'));
+            nonWordItems.forEach(item => grid.appendChild(item));
+        }
+        
+        // Unignore word functionality
+        async function unignoreWord(word, cardElement) {
+            try {
+                // Add visual feedback to the card
+                cardElement.style.opacity = '0.5';
+                cardElement.style.pointerEvents = 'none';
+                
+                const response = await fetch('/unignore_word', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ word: word })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update card status
+                    cardElement.setAttribute('data-status', 'unknown');
+                    
+                    // Show success message
+                    showNotificationMessage(result.message, 'success');
+                    
+                    // Restore card interaction
+                    cardElement.style.opacity = '1';
+                    cardElement.style.pointerEvents = 'auto';
+                } else {
+                    // Show error and restore card
+                    showNotificationMessage('Failed to un-ignore word: ' + result.error, 'error');
+                    cardElement.style.opacity = '1';
+                    cardElement.style.pointerEvents = 'auto';
+                }
+            } catch (error) {
+                console.error('Error un-ignoring word:', error);
+                showNotificationMessage('Network error while un-ignoring word', 'error');
+                cardElement.style.opacity = '1';
+                cardElement.style.pointerEvents = 'auto';
+            }
+        }
+        
+        // Ignore word functionality
+        async function ignoreWord(word, cardElement) {
+            try {
+                // Add visual feedback to the card
+                cardElement.style.opacity = '0.5';
+                cardElement.style.pointerEvents = 'none';
+                
+                const response = await fetch('/ignore_word', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ word: word })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    // Update card status
+                    cardElement.setAttribute('data-status', 'ignored');
+                    
+                    // Show success message
+                    showNotificationMessage(result.message, 'success');
+                    
+                    // Restore card interaction
+                    cardElement.style.opacity = '1';
+                    cardElement.style.pointerEvents = 'auto';
+                } else {
+                    // Show error and restore card
+                    showNotificationMessage('Failed to ignore word: ' + result.error, 'error');
+                    cardElement.style.opacity = '1';
+                    cardElement.style.pointerEvents = 'auto';
+                }
+            } catch (error) {
+                console.error('Error ignoring word:', error);
+                showNotificationMessage('Network error while ignoring word', 'error');
+                cardElement.style.opacity = '1';
+                cardElement.style.pointerEvents = 'auto';
+            }
+        }
+        
+        function showNotificationMessage(message, type = 'info') {
+            // Create notification element
+            const notification = document.createElement('div');
+            notification.className = `notification notification-${type}`;
+            notification.textContent = message;
+            
+            // Add to page
+            document.body.appendChild(notification);
+            
+            // Auto-remove after 3 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 3000);
+        }
+        
+        // Add number formatting filter support
+        if (typeof Intl !== 'undefined' && Intl.NumberFormat) {
+            const numberElements = document.querySelectorAll('[data-number]');
+            numberElements.forEach(el => {
+                const num = parseInt(el.getAttribute('data-number'));
+                el.textContent = new Intl.NumberFormat().format(num);
+            });
+        }
+    </script>
+</body>
+</html>

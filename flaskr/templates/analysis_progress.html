@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyzing: {{ filename }} - Novelv</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <style>
+        body {
+            background: var(--bg-primary);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .progress-container {
+            background: var(--bg-elevated);
+            padding: var(--space-2xl);
+            border-radius: var(--radius-xl);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        .title {
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: var(--space-sm);
+        }
+        
+        .subtitle {
+            color: var(--text-secondary);
+            margin-bottom: var(--space-xl);
+            font-size: var(--text-lg);
+        }
+        
+        .progress-bar-container {
+            background: var(--neutral-300);
+            border-radius: var(--radius-lg);
+            height: 20px;
+            margin: var(--space-lg) 0;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-success), var(--accent-info));
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: var(--radius-lg);
+        }
+        
+        .progress-text {
+            font-size: var(--text-xl);
+            font-weight: 500;
+            color: var(--text-primary);
+            margin: var(--space-md) 0;
+        }
+        
+        .progress-details {
+            color: var(--text-secondary);
+            font-size: var(--text-sm);
+            margin: var(--space-sm) 0;
+            min-height: 20px;
+        }
+        
+        .stage-indicator {
+            display: flex;
+            justify-content: center;
+            gap: var(--space-lg);
+            margin: var(--space-xl) 0;
+        }
+        
+        .stage {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: var(--space-xs);
+        }
+        
+        .stage-circle {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: var(--neutral-300);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            font-size: var(--text-xs);
+        }
+        
+        .stage-circle.active {
+            background: var(--accent-primary);
+            color: white;
+        }
+        
+        .stage-circle.complete {
+            background: var(--accent-success);
+            color: white;
+        }
+        
+        .stage-label {
+            font-size: var(--text-xs);
+            color: var(--text-secondary);
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid var(--neutral-300);
+            border-top: 3px solid var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: var(--space-sm);
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .chunk-info {
+            background: var(--bg-secondary);
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+            margin: var(--space-lg) 0;
+            font-family: var(--font-mono);
+            font-size: var(--text-sm);
+            color: var(--text-primary);
+        }
+        
+        .error-message {
+            background: var(--accent-error);
+            color: var(--error-800);
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+            border: 1px solid #ef4444;
+            margin: var(--space-lg) 0;
+        }
+        
+        .success-message {
+            background: var(--accent-success);
+            color: var(--success-800);
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+            border: 1px solid #10b981;
+            margin: 20px 0;
+        }
+
+        /* Yomitan API Status Indicator */
+        .yomitan-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background-color: white;
+            padding: 8px 12px;
+            border-radius: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border: 1px solid #dee2e6;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+
+        .status-dot.online {
+            background-color: #28a745;
+            animation: pulse-green 2s infinite;
+        }
+
+        .status-dot.offline {
+            background-color: #dc3545;
+            animation: pulse-red 1s infinite;
+        }
+
+        .status-dot.checking {
+            background-color: #ffc107;
+            animation: pulse-yellow 1.5s infinite;
+        }
+
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(40, 167, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+        }
+
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
+        }
+
+        @keyframes pulse-yellow {
+            0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+            70% { box-shadow: 0 0 0 8px rgba(255, 193, 7, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
+        }
+
+        .status-notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+            background-color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            border-left: 4px solid;
+            z-index: 1001;
+            font-size: 14px;
+            font-weight: 500;
+            max-width: 300px;
+        }
+
+        .status-notification.show {
+            transform: translateX(0);
+        }
+
+        .status-notification.success {
+            border-left-color: #28a745;
+            color: #155724;
+        }
+
+        .status-notification.error {
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <!-- Yomitan API Status Indicator -->
+    <div class="yomitan-status" id="yomitanStatus">
+        <div class="status-dot checking" id="statusDot"></div>
+        <span id="statusText">Checking...</span>
+    </div>
+
+    <div class="progress-container">
+        <div class="title">📊 Analyzing Text</div>
+        <div class="subtitle">{{ filename.rsplit('.', 1)[0] }}</div>
+        
+        <div class="stage-indicator">
+            <div class="stage">
+                <div class="stage-circle" id="stage-starting">1</div>
+                <div class="stage-label">Starting</div>
+            </div>
+            <div class="stage">
+                <div class="stage-circle" id="stage-tokenizing">2</div>
+                <div class="stage-label">Tokenizing</div>
+            </div>
+            <div class="stage">
+                <div class="stage-circle" id="stage-analyzing">3</div>
+                <div class="stage-label">Analyzing</div>
+            </div>
+            <div class="stage">
+                <div class="stage-circle" id="stage-complete">4</div>
+                <div class="stage-label">Complete</div>
+            </div>
+        </div>
+        
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div class="progress-text" id="progressText">
+            <span class="spinner"></span>Initializing analysis...
+        </div>
+        
+        <div class="progress-details" id="progressDetails"></div>
+        
+        <div class="chunk-info" id="chunkInfo" style="display: none;"></div>
+        
+        <div class="error-message" id="errorMessage" style="display: none;"></div>
+        <div class="success-message" id="successMessage" style="display: none;"></div>
+    </div>
+
+    <script>
+        class AnalysisProgressTracker {
+            constructor(progressId) {
+                this.progressId = progressId;
+                this.eventSource = null;
+                this.startAnalysis();
+            }
+            
+            async startAnalysis() {
+                try {
+                    // Start listening to progress updates FIRST
+                    this.listenToProgress();
+                    
+                    // Small delay to ensure SSE connection is established
+                    await new Promise(resolve => setTimeout(resolve, 500));
+                    
+                    // Then start the analysis
+                    const response = await fetch(`/analyze/execute/${this.progressId}`);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        throw new Error(`HTTP ${response.status}: ${errorText}`);
+                    }
+                    
+                    const result = await response.json();
+                    console.log('Analysis started:', result);
+                    
+                } catch (error) {
+                    console.error('Failed to start analysis:', error);
+                    this.showError(`Failed to start analysis: ${error.message}`);
+                }
+            }
+            
+            listenToProgress() {
+                this.eventSource = new EventSource(`/analyze/progress/${this.progressId}`);
+                
+                this.eventSource.onmessage = (event) => {
+                    try {
+                        const progress = JSON.parse(event.data);
+                        this.updateProgress(progress);
+                    } catch (error) {
+                        console.error('Error parsing progress data:', error);
+                    }
+                };
+                
+                this.eventSource.onerror = (error) => {
+                    console.error('SSE error:', error);
+                    this.eventSource.close();
+                };
+            }
+            
+            updateProgress(progress) {
+                const progressBar = document.getElementById('progressBar');
+                const progressText = document.getElementById('progressText');
+                const progressDetails = document.getElementById('progressDetails');
+                const chunkInfo = document.getElementById('chunkInfo');
+                
+                // Update progress bar
+                progressBar.style.width = `${progress.progress}%`;
+                
+                // Update text
+                progressText.innerHTML = `<span class="spinner"></span>${progress.message}`;
+                
+                // Update stage indicators
+                this.updateStageIndicators(progress.stage);
+                
+                // Show chunk information if available
+                if (progress.total_chunks && progress.completed_chunks !== undefined) {
+                    chunkInfo.style.display = 'block';
+                    chunkInfo.innerHTML = `
+                        Chunk Progress: ${progress.completed_chunks}/${progress.total_chunks}
+                        <br>Stage: ${progress.stage}
+                    `;
+                    
+                    progressDetails.textContent = `Processing chunk ${progress.completed_chunks + 1} of ${progress.total_chunks}`;
+                } else {
+                    progressDetails.textContent = progress.stage || '';
+                }
+                
+                // Handle completion
+                if (progress.stage === 'complete') {
+                    this.handleComplete();
+                } else if (progress.stage === 'error') {
+                    this.showError(progress.message);
+                }
+            }
+            
+            updateStageIndicators(currentStage) {
+                const stages = ['starting', 'tokenizing', 'analyzing', 'complete'];
+                const stageMap = {
+                    'starting': 'starting',
+                    'preprocessing': 'starting', 
+                    'chunking': 'tokenizing',
+                    'tokenizing': 'tokenizing',
+                    'filtering': 'tokenizing',
+                    'analyzing': 'analyzing',
+                    'complete': 'complete',
+                    'error': 'complete'
+                };
+                
+                const mappedStage = stageMap[currentStage] || currentStage;
+                const currentIndex = stages.indexOf(mappedStage);
+                
+                stages.forEach((stage, index) => {
+                    const element = document.getElementById(`stage-${stage}`);
+                    element.className = 'stage-circle';
+                    
+                    if (index < currentIndex) {
+                        element.className += ' complete';
+                        element.textContent = '✓';
+                    } else if (index === currentIndex) {
+                        element.className += ' active';
+                        element.textContent = index + 1;
+                    } else {
+                        element.textContent = index + 1;
+                    }
+                });
+            }
+            
+            async handleComplete() {
+                const progressText = document.getElementById('progressText');
+                const successMessage = document.getElementById('successMessage');
+                
+                progressText.innerHTML = '✅ Analysis complete! Redirecting...';
+                successMessage.style.display = 'block';
+                successMessage.textContent = 'Analysis completed successfully. Redirecting to results...';
+                
+                // Close event source
+                if (this.eventSource) {
+                    this.eventSource.close();
+                }
+                
+                // Redirect to results page with progress_id parameter after a short delay
+                setTimeout(() => {
+                    window.location.href = `/analysis/results?progress_id=${this.progressId}`;
+                }, 2000);
+            }
+            
+            showError(message) {
+                const progressText = document.getElementById('progressText');
+                const errorMessage = document.getElementById('errorMessage');
+                const spinner = document.querySelector('.spinner');
+                
+                progressText.innerHTML = '❌ Analysis failed';
+                errorMessage.style.display = 'block';
+                errorMessage.textContent = message;
+                
+                if (spinner) spinner.style.display = 'none';
+                if (this.eventSource) this.eventSource.close();
+            }
+        }
+        
+        // Yomitan status checker (reused from other templates)
+        class YomitanStatusChecker {
+            constructor() {
+                this.statusDot = document.getElementById('statusDot');
+                this.statusText = document.getElementById('statusText');
+                this.isOnline = null;
+                this.checkInterval = null;
+                this.notificationTimeout = null;
+                
+                this.startChecking();
+            }
+            
+            async checkStatus() {
+                try {
+                    const response = await fetch('/health/yomitan', {
+                        method: 'GET',
+                        timeout: 5000
+                    });
+                    
+                    const data = await response.json();
+                    const isCurrentlyOnline = data.healthy === true;
+                    
+                    this.updateStatus(isCurrentlyOnline);
+                    return isCurrentlyOnline;
+                } catch (error) {
+                    console.error('Failed to check Yomitan status:', error);
+                    this.updateStatus(false);
+                    return false;
+                }
+            }
+            
+            updateStatus(isOnline) {
+                const previousStatus = this.isOnline;
+                this.isOnline = isOnline;
+                
+                // Update visual indicator
+                this.statusDot.className = 'status-dot ' + (isOnline ? 'online' : 'offline');
+                this.statusText.textContent = isOnline ? 'Yomitan Ready' : 'Yomitan Offline';
+                
+                // Show notification on status change
+                if (previousStatus !== null && previousStatus !== isOnline) {
+                    this.showNotification(isOnline);
+                }
+                
+                // Adjust check frequency based on status
+                this.adjustCheckInterval(isOnline);
+            }
+            
+            adjustCheckInterval(isOnline) {
+                if (this.checkInterval) {
+                    clearInterval(this.checkInterval);
+                }
+                
+                // Check more frequently when offline to detect recovery quickly
+                const interval = isOnline ? 30000 : 5000; // 30s when online, 5s when offline
+                this.checkInterval = setInterval(() => this.checkStatus(), interval);
+            }
+            
+            showNotification(isOnline) {
+                // Remove existing notification
+                const existingNotification = document.querySelector('.status-notification');
+                if (existingNotification) {
+                    existingNotification.remove();
+                }
+                
+                // Create new notification
+                const notification = document.createElement('div');
+                notification.className = `status-notification ${isOnline ? 'success' : 'error'}`;
+                notification.textContent = isOnline 
+                    ? 'Yomitan API is now available!' 
+                    : 'Yomitan API connection lost!';
+                
+                document.body.appendChild(notification);
+                
+                // Show notification
+                setTimeout(() => notification.classList.add('show'), 100);
+                
+                // Hide notification after 3 seconds
+                if (this.notificationTimeout) {
+                    clearTimeout(this.notificationTimeout);
+                }
+                this.notificationTimeout = setTimeout(() => {
+                    notification.classList.remove('show');
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+            
+            startChecking() {
+                // Initial check
+                this.checkStatus();
+            }
+        }
+        
+        // Start progress tracking and status checking when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new AnalysisProgressTracker('{{ progress_id }}');
+            new YomitanStatusChecker();
+        });
+    </script>
+</body>
+</html>
