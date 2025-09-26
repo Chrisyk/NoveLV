@@ -14,7 +14,7 @@
         .container {
             max-width: 800px;
             margin: 0 auto;
-            padding: var(--space-xl) var(--space-md);
+            padding: var(--space-xl);
         }
 
         .card {
@@ -31,14 +31,14 @@
         }
 
         .header h1 {
-            color: var(--gray-800);
+            color: var(--text-primary);
             font-size: 2rem;
             font-weight: 700;
             margin: 0 0 0.5rem 0;
         }
 
         .subtitle {
-            color: var(--gray-600);
+            color: var(--text-secondary);
             font-size: 1.1rem;
         }
 
@@ -136,6 +136,40 @@
             margin: var(--space-md) 0;
             color: var(--text-primary);
         }
+
+        /* Responsive padding */
+        @media (max-width: 768px) {
+            .container {
+                padding: var(--space-lg) var(--space-md);
+            }
+            
+            .card {
+                padding: var(--space-lg);
+                margin-bottom: var(--space-lg);
+            }
+            
+            .actions {
+                flex-direction: column;
+            }
+            
+            .header h1 {
+                font-size: 1.75rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: var(--space-md);
+            }
+            
+            .card {
+                padding: var(--space-md);
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
     </style>
 </head>
 <body>
@@ -192,7 +226,7 @@
         </div>
 
         <div style="text-align: center; margin-top: 2rem;">
-            <a href="{{ url_for('home') }}" style="color: var(--gray-500); text-decoration: none;">← Back to Home</a>
+            <a href="{{ url_for('home') }}" style="color: var(--text-secondary); text-decoration: none;">← Back to Home</a>
         </div>
     </div>
 </body>

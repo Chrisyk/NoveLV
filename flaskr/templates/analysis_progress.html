@@ -152,103 +152,12 @@
             margin: 20px 0;
         }
 
-        /* Yomitan API Status Indicator */
-        .yomitan-status {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            background-color: white;
-            padding: 8px 12px;
-            border-radius: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-            border: 1px solid #dee2e6;
-            font-size: 12px;
-            font-weight: 500;
-        }
 
-        .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            transition: all 0.3s ease;
-        }
 
-        .status-dot.online {
-            background-color: #28a745;
-            animation: pulse-green 2s infinite;
-        }
 
-        .status-dot.offline {
-            background-color: #dc3545;
-            animation: pulse-red 1s infinite;
-        }
-
-        .status-dot.checking {
-            background-color: #ffc107;
-            animation: pulse-yellow 1.5s infinite;
-        }
-
-        @keyframes pulse-green {
-            0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
-            70% { box-shadow: 0 0 0 8px rgba(40, 167, 69, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
-        }
-
-        @keyframes pulse-red {
-            0% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
-            70% { box-shadow: 0 0 0 8px rgba(220, 53, 69, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
-        }
-
-        @keyframes pulse-yellow {
-            0% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
-            70% { box-shadow: 0 0 0 8px rgba(255, 193, 7, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0); }
-        }
-
-        .status-notification {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            transform: translateX(100%);
-            transition: transform 0.3s ease;
-            background-color: white;
-            padding: 12px 16px;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-            border-left: 4px solid;
-            z-index: 1001;
-            font-size: 14px;
-            font-weight: 500;
-            max-width: 300px;
-        }
-
-        .status-notification.show {
-            transform: translateX(0);
-        }
-
-        .status-notification.success {
-            border-left-color: #28a745;
-            color: #155724;
-        }
-
-        .status-notification.error {
-            border-left-color: #dc3545;
-            color: #721c24;
-        }
     </style>
 </head>
 <body>
-    <!-- Yomitan API Status Indicator -->
-    <div class="yomitan-status" id="yomitanStatus">
-        <div class="status-dot checking" id="statusDot"></div>
-        <span id="statusText">Checking...</span>
-    </div>
-
     <div class="progress-container">
         <div class="title">📊 Analyzing Text</div>
         <div class="subtitle">{{ filename.rsplit('.', 1)[0] }}</div>
@@ -440,103 +349,9 @@
             }
         }
         
-        // Yomitan status checker (reused from other templates)
-        class YomitanStatusChecker {
-            constructor() {
-                this.statusDot = document.getElementById('statusDot');
-                this.statusText = document.getElementById('statusText');
-                this.isOnline = null;
-                this.checkInterval = null;
-                this.notificationTimeout = null;
-                
-                this.startChecking();
-            }
-            
-            async checkStatus() {
-                try {
-                    const response = await fetch('/health/yomitan', {
-                        method: 'GET',
-                        timeout: 5000
-                    });
-                    
-                    const data = await response.json();
-                    const isCurrentlyOnline = data.healthy === true;
-                    
-                    this.updateStatus(isCurrentlyOnline);
-                    return isCurrentlyOnline;
-                } catch (error) {
-                    console.error('Failed to check Yomitan status:', error);
-                    this.updateStatus(false);
-                    return false;
-                }
-            }
-            
-            updateStatus(isOnline) {
-                const previousStatus = this.isOnline;
-                this.isOnline = isOnline;
-                
-                // Update visual indicator
-                this.statusDot.className = 'status-dot ' + (isOnline ? 'online' : 'offline');
-                this.statusText.textContent = isOnline ? 'Yomitan Ready' : 'Yomitan Offline';
-                
-                // Show notification on status change
-                if (previousStatus !== null && previousStatus !== isOnline) {
-                    this.showNotification(isOnline);
-                }
-                
-                // Adjust check frequency based on status
-                this.adjustCheckInterval(isOnline);
-            }
-            
-            adjustCheckInterval(isOnline) {
-                if (this.checkInterval) {
-                    clearInterval(this.checkInterval);
-                }
-                
-                // Check more frequently when offline to detect recovery quickly
-                const interval = isOnline ? 30000 : 5000; // 30s when online, 5s when offline
-                this.checkInterval = setInterval(() => this.checkStatus(), interval);
-            }
-            
-            showNotification(isOnline) {
-                // Remove existing notification
-                const existingNotification = document.querySelector('.status-notification');
-                if (existingNotification) {
-                    existingNotification.remove();
-                }
-                
-                // Create new notification
-                const notification = document.createElement('div');
-                notification.className = `status-notification ${isOnline ? 'success' : 'error'}`;
-                notification.textContent = isOnline 
-                    ? 'Yomitan API is now available!' 
-                    : 'Yomitan API connection lost!';
-                
-                document.body.appendChild(notification);
-                
-                // Show notification
-                setTimeout(() => notification.classList.add('show'), 100);
-                
-                // Hide notification after 3 seconds
-                if (this.notificationTimeout) {
-                    clearTimeout(this.notificationTimeout);
-                }
-                this.notificationTimeout = setTimeout(() => {
-                    notification.classList.remove('show');
-                    setTimeout(() => notification.remove(), 300);
-                }, 3000);
-            }
-            
-            startChecking() {
-                // Initial check
-                this.checkStatus();
-            }
-        }
-        
-        // Start progress tracking and status checking when page loads
+        // Start progress tracking when page loads
         document.addEventListener('DOMContentLoaded', () => {
             new AnalysisProgressTracker('{{ progress_id }}');
-            new YomitanStatusChecker();
         });
     </script>
 </body>

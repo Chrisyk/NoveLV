@@ -8,9 +8,9 @@
     --bg-hover: #333354;
     
     /* Text Colors */
-    --text-primary: #e2e8f0;
-    --text-secondary: #94a3b8;
-    --text-muted: #64748b;
+    --text-primary: #ffffff;
+    --text-secondary: #f1f5f9;
+    --text-muted: #e2e8f0;
     --text-inverse: #1e293b;
     
     /* Accent Colors */
@@ -38,12 +38,12 @@
     --neutral-100: #1a1a2e;
     --neutral-200: #262640;
     --neutral-300: #333354;
-    --neutral-400: #64748b;
-    --neutral-500: #94a3b8;
-    --neutral-600: #cbd5e1;
-    --neutral-700: #e2e8f0;
-    --neutral-800: #e2e8f0;
-    --neutral-900: #f1f5f9;
+    --neutral-400: #94a3b8;
+    --neutral-500: #cbd5e1;
+    --neutral-600: #e2e8f0;
+    --neutral-700: #f1f5f9;
+    --neutral-800: #ffffff;
+    --neutral-900: #ffffff;
     
     /* Amber Colors (for accents) */
     --amber-100: #2a2a4a;
@@ -285,18 +285,19 @@ html, body {
 
 .btn-secondary:hover {
     background: var(--bg-hover);
+    border-color: var(--accent-primary);
 }
 
 .btn-outline {
     background: transparent;
-    color: var(--text-secondary);
-    border: 1px solid var(--neutral-400);
+    color: var(--text-primary);
+    border: 1px solid var(--neutral-300);
 }
 
 .btn-outline:hover {
     background: var(--bg-hover);
     color: var(--text-primary);
-    border-color: var(--neutral-300);
+    border-color: var(--accent-primary);
 }
 
 .btn-sm {

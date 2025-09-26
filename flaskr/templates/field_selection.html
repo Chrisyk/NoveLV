@@ -8,9 +8,20 @@
     <style>
         body {
             background: var(--bg-primary);
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .main-container {
+            background: var(--bg-primary);
+            min-height: 100vh;
             max-width: 800px;
             margin: 0 auto;
             padding: var(--space-xl);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .container {
             background: var(--bg-elevated);
@@ -75,45 +86,50 @@
             box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
         }
         .btn-secondary {
-            background: var(--neutral-600);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--neutral-300);
         }
         .btn-secondary:hover {
-            background: var(--neutral-700);
+            background: var(--bg-hover);
+            border-color: var(--accent-primary);
         }
         .btn-success {
             background: var(--accent-success);
+            color: white;
         }
         .btn-success:hover {
-            background: var(--success-700);
+            background: var(--accent-success);
+            filter: brightness(0.9);
         }
         .btn-warning {
             background: var(--accent-warning);
-            color: var(--warning-900);
+            color: var(--text-inverse);
         }
         .btn-warning:hover {
-            background: var(--warning-600);
+            background: var(--accent-warning);
+            filter: brightness(0.9);
         }
         .existing-cache {
-            background: var(--accent-success);
+            background: rgba(16, 185, 129, 0.1);
             padding: var(--space-md);
             border-radius: var(--radius-md);
             margin-bottom: var(--space-lg);
-            border: 1px solid var(--success-600);
+            border: 1px solid var(--accent-success);
         }
         .existing-cache h3 {
             margin-top: 0;
-            color: var(--success-900);
-            color: #155724;
+            color: var(--text-primary);
         }
         .cache-item {
-            background-color: #f8f9fa;
+            background-color: var(--bg-secondary);
             padding: 8px 12px;
             margin: 5px 0;
             border-radius: 3px;
-            border-left: 3px solid #28a745;
+            border-left: 3px solid var(--accent-success);
         }
         .action-section {
-            background-color: #f8f9fa;
+            background-color: var(--bg-secondary);
             padding: 20px;
             border-radius: 5px;
             margin-top: 25px;
@@ -125,13 +141,14 @@
         }
         .action-description {
             margin-bottom: 15px;
-            color: #666;
+            color: var(--text-secondary);
             font-size: 14px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="main-container">
+        <div class="container">
         <h1>Select Field to Extract</h1>
         
         <div class="note-type-info">
@@ -201,6 +218,7 @@
                 <a href="{{ url_for('home') }}" class="btn btn-secondary">← Back to Note Types</a>
             </div>
         </form>
+        </div>
     </div>
 </body>
 </html>

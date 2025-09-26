@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocabulary Cache Results - Novelv</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
+    <style>
+        body {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: var(--space-xl);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: var(--space-xl);
+        }
+
+        .header h1 {
+            color: var(--text-primary);
+            font-size: var(--text-3xl);
+            font-weight: 700;
+            margin-bottom: var(--space-sm);
+        }
+
+        .subtitle {
+            color: var(--text-secondary);
+            font-size: var(--text-lg);
+        }
+
+        .results-summary {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-xl);
+            border: 1px solid var(--neutral-300);
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--space-lg);
+            margin-bottom: var(--space-lg);
+        }
+
+        .summary-item {
+            text-align: center;
+            padding: var(--space-md);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+        }
+
+        .summary-value {
+            font-size: var(--text-2xl);
+            font-weight: 700;
+            color: var(--accent-primary);
+            margin-bottom: var(--space-xs);
+        }
+
+        .summary-label {
+            color: var(--text-secondary);
+            font-size: var(--text-sm);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .cache-details {
+            background: var(--bg-tertiary);
+            padding: var(--space-md);
+            border-radius: var(--radius-md);
+            margin-top: var(--space-md);
+        }
+
+        .cache-details h3 {
+            color: var(--text-primary);
+            margin-bottom: var(--space-sm);
+            font-size: var(--text-lg);
+        }
+
+        .cache-details p {
+            color: var(--text-secondary);
+            margin-bottom: var(--space-xs);
+            font-size: var(--text-sm);
+        }
+
+        .expressions-section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-xl);
+            border: 1px solid var(--neutral-300);
+        }
+
+        .expressions-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: var(--space-lg);
+        }
+
+        .expressions-header h2 {
+            color: var(--text-primary);
+            font-size: var(--text-xl);
+            margin: 0;
+        }
+
+        .view-all-note {
+            color: var(--text-secondary);
+            font-size: var(--text-sm);
+            font-style: italic;
+        }
+
+        .expressions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: var(--space-sm);
+            max-height: 400px;
+            overflow-y: auto;
+            padding: var(--space-sm);
+            background: var(--bg-tertiary);
+            border-radius: var(--radius-md);
+        }
+
+        .expression-item {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            font-size: var(--text-sm);
+            text-align: center;
+            border: 1px solid var(--neutral-300);
+            transition: background-color 0.2s ease;
+        }
+
+        .expression-item:hover {
+            background: var(--neutral-200);
+        }
+
+        .actions {
+            text-align: center;
+            margin-top: var(--space-xl);
+        }
+
+        .btn {
+            background: var(--accent-primary);
+            color: var(--text-primary);
+            padding: var(--space-md) var(--space-xl);
+            border-radius: var(--radius-md);
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            transition: background-color 0.2s ease;
+            border: none;
+            cursor: pointer;
+            margin: 0 var(--space-sm);
+        }
+
+        .btn:hover {
+            background: var(--accent-hover);
+        }
+
+        .btn-secondary {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--neutral-300);
+        }
+
+        .btn-secondary:hover {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        @media (max-width: 768px) {
+            .summary-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .expressions-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+            
+            .expressions-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: var(--space-sm);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Vocabulary Cache Updated</h1>
+            <p class="subtitle">Successfully processed your Anki vocabulary</p>
+        </div>
+
+        <div class="results-summary">
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-value">{{ total_expressions }}</div>
+                    <div class="summary-label">Total Expressions</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">{{ "%.2f"|format(processing_time) }}s</div>
+                    <div class="summary-label">Processing Time</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">{{ note_type }}</div>
+                    <div class="summary-label">Note Type</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-value">{{ field }}</div>
+                    <div class="summary-label">Field</div>
+                </div>
+            </div>
+
+            <div class="cache-details">
+                <h3>📁 Cache Information</h3>
+                <p><strong>Last Updated:</strong> {{ cache_info.last_update if cache_info.last_update else 'Just now' }}</p>
+                <p><strong>Cards Processed:</strong> {{ cache_info.card_count if cache_info.card_count else total_expressions }}</p>
+                <p><strong>Cache Version:</strong> {{ cache_info.version if cache_info.version else '1.0' }}</p>
+            </div>
+        </div>
+
+        {% if expressions %}
+        <div class="expressions-section">
+            <div class="expressions-header">
+                <h2>📝 Sample Expressions</h2>
+                <span class="view-all-note">
+                    {% if total_expressions > 100 %}
+                        Showing first 100 of {{ total_expressions }} expressions
+                    {% else %}
+                        Showing all {{ total_expressions }} expressions
+                    {% endif %}
+                </span>
+            </div>
+            
+            <div class="expressions-grid">
+                {% for expression in expressions %}
+                    <div class="expression-item">{{ expression }}</div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="actions">
+            <a href="{{ url_for('settings') }}" class="btn btn-secondary">⚙️ Back to Settings</a>
+            <a href="{{ url_for('home') }}" class="btn">🏠 Go to Library</a>
+        </div>
+    </div>
+</body>
+</html>

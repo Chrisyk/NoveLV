@@ -106,6 +106,75 @@
             color: var(--text-secondary);
         }
         
+        .btn-delete {
+            background: var(--accent-error);
+            color: var(--text-primary);
+            border: none;
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: var(--text-sm);
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 32px;
+        }
+        
+        .btn-delete:hover {
+            background: var(--accent-error);
+            filter: brightness(0.8);
+            transform: scale(1.05);
+        }
+        
+        .btn-delete:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-view {
+            background: var(--accent-primary);
+            color: var(--text-primary);
+            border: none;
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: var(--text-sm);
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+            height: 32px;
+            text-decoration: none;
+        }
+        
+        .btn-view:hover {
+            background: var(--accent-primary);
+            filter: brightness(1.1);
+            transform: scale(1.05);
+        }
+        
+        .btn-view:active {
+            transform: scale(0.95);
+        }
+        
+        .btn-danger {
+            background: var(--accent-error);
+            color: var(--text-primary);
+            border: none;
+            padding: var(--space-sm) var(--space-md);
+            border-radius: var(--radius-md);
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-danger:hover {
+            background: var(--accent-error);
+            filter: brightness(0.8);
+        }
+        
         .anki-form {
             display: flex;
             flex-direction: column;
@@ -258,6 +327,7 @@
                                 <th>Field Name</th>
                                 <th>Total Cards</th>
                                 <th>Last Updated</th>
+                                <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -267,10 +337,33 @@
                                     <td>{{ cache.field_name }}</td>
                                     <td>{{ cache.total_cards }}</td>
                                     <td>{{ cache.last_updated }}</td>
+                                    <td>
+                                        <a href="{{ url_for('view_cache_expressions', note_type=cache.note_type, field_name=cache.field_name) }}" 
+                                           class="btn-view" title="View all expressions" style="margin-right: var(--space-sm);">
+                                            👁️
+                                        </a>
+                                        <form method="POST" action="{{ url_for('delete_cache') }}" style="display: inline;" 
+                                              onsubmit="return confirm('Are you sure you want to delete the cache for {{ cache.note_type }} - {{ cache.field_name }}? This action cannot be undone.')">
+                                            <input type="hidden" name="note_type" value="{{ cache.note_type }}">
+                                            <input type="hidden" name="field_name" value="{{ cache.field_name }}">
+                                            <button type="submit" class="btn-delete" title="Delete cache">
+                                                🗑️
+                                            </button>
+                                        </form>
+                                    </td>
                                 </tr>
                             {% endfor %}
                         </tbody>
                     </table>
+                    
+                    <div class="cache-actions" style="margin-top: var(--space-lg); text-align: right;">
+                        <form method="POST" action="{{ url_for('clear_all_caches') }}" style="display: inline;" 
+                              onsubmit="return confirm('Are you sure you want to delete ALL vocabulary caches? This action cannot be undone and will remove all cached data.')">
+                            <button type="submit" class="btn btn-danger">
+                                🗑️ Clear All Caches
+                            </button>
+                        </form>
+                    </div>
                 {% else %}
                     <div class="empty-state">
                         <div class="empty-state-icon">📁</div>

@@ -4,29 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analysis Records - {{ filename }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme.css') }}">
     <style>
-        :root {
-            --primary-color: #4f46e5;
-            --success-color: #059669;
-            --warning-color: #d97706;
-            --error-color: #dc2626;
-            --gray-50: #f9fafb;
-            --gray-100: #f3f4f6;
-            --gray-200: #e5e7eb;
-            --gray-300: #d1d5db;
-            --gray-500: #6b7280;
-            --gray-600: #4b5563;
-            --gray-700: #374151;
-            --gray-800: #1f2937;
-            --gray-900: #111827;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            line-height: 1.6;
-            margin: 0;
-            padding: 0;
-            background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+            background: var(--bg-primary);
+            color: var(--text-primary);
             min-height: 100vh;
         }
 
@@ -42,7 +24,7 @@
         }
 
         .header h1 {
-            color: var(--gray-800);
+            color: var(--text-primary);
             font-size: 2rem;
             font-weight: 700;
             margin: 0 0 0.5rem 0;
@@ -50,7 +32,7 @@
         }
 
         .subtitle {
-            color: var(--gray-600);
+            color: var(--text-secondary);
             font-size: 1.1rem;
         }
 
@@ -76,24 +58,24 @@
         }
 
         .btn-primary {
-            background: var(--primary-color);
-            color: white;
+            background: var(--accent-primary);
+            color: var(--text-primary);
         }
 
         .btn-primary:hover {
-            background: #4338ca;
+            background: var(--accent-hover);
             transform: translateY(-1px);
         }
 
         .btn-danger {
-            background: var(--error-color);
-            color: white;
+            background: var(--accent-error);
+            color: var(--text-primary);
             padding: 0.5rem 1rem;
             font-size: 0.75rem;
         }
 
         .btn-danger:hover {
-            background: #b91c1c;
+            filter: brightness(0.9);
         }
 
         .records-grid {
@@ -102,16 +84,16 @@
         }
 
         .record-card {
-            background: white;
+            background: var(--bg-secondary);
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
             padding: 1.5rem;
             transition: all 0.2s ease;
-            border-left: 4px solid var(--primary-color);
+            border-left: 4px solid var(--accent-primary);
         }
 
         .record-card:hover {
-            box-shadow: 0 8px 12px -1px rgba(0, 0, 0, 0.15);
+            box-shadow: 0 8px 12px -1px rgba(0, 0, 0, 0.4);
             transform: translateY(-2px);
         }
 
@@ -128,7 +110,7 @@
         }
 
         .timestamp {
-            color: var(--gray-500);
+            color: var(--text-secondary);
             font-size: 0.875rem;
             font-weight: 600;
         }
@@ -143,19 +125,19 @@
         .stat {
             text-align: center;
             padding: 0.75rem;
-            background: var(--gray-50);
+            background: var(--bg-tertiary);
             border-radius: 8px;
         }
 
         .stat-value {
             font-size: 1.25rem;
             font-weight: 700;
-            color: var(--gray-800);
+            color: var(--text-primary);
         }
 
         .stat-label {
             font-size: 0.75rem;
-            color: var(--gray-600);
+            color: var(--text-secondary);
             margin-top: 0.25rem;
         }
 
@@ -165,10 +147,10 @@
             margin-bottom: 0.5rem;
         }
 
-        .rate-excellent { color: var(--success-color); }
-        .rate-good { color: #059669; }
-        .rate-fair { color: var(--warning-color); }
-        .rate-poor { color: var(--error-color); }
+        .rate-excellent { color: var(--accent-success); }
+        .rate-good { color: var(--accent-success); }
+        .rate-fair { color: var(--accent-warning); }
+        .rate-poor { color: var(--accent-error); }
 
         .difficulty-badge {
             display: inline-block;
@@ -179,9 +161,9 @@
             text-transform: uppercase;
         }
 
-        .difficulty-beginner { background: rgba(34, 197, 94, 0.2); color: #059669; }
-        .difficulty-intermediate { background: rgba(251, 191, 36, 0.2); color: #d97706; }
-        .difficulty-advanced { background: rgba(239, 68, 68, 0.2); color: #dc2626; }
+        .difficulty-beginner { background: rgba(34, 197, 94, 0.3); color: var(--accent-success); }
+        .difficulty-intermediate { background: rgba(251, 191, 36, 0.3); color: var(--accent-warning); }
+        .difficulty-advanced { background: rgba(239, 68, 68, 0.3); color: var(--accent-error); }
 
         .actions-group {
             display: flex;
@@ -192,19 +174,19 @@
         .empty-state {
             text-align: center;
             padding: 4rem 2rem;
-            color: var(--gray-500);
+            color: var(--text-secondary);
         }
 
         .empty-state h3 {
             font-size: 1.5rem;
             margin-bottom: 1rem;
-            color: var(--gray-600);
+            color: var(--text-primary);
         }
 
         .file-info {
-            background: white;
+            background: var(--bg-secondary);
             border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
             padding: 1.5rem;
             margin-bottom: 2rem;
         }
@@ -212,7 +194,7 @@
         .file-title {
             font-size: 1.25rem;
             font-weight: 700;
-            color: var(--gray-800);
+            color: var(--text-primary);
             margin-bottom: 0.5rem;
             font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
         }
@@ -242,7 +224,7 @@
 
         <div class="file-info">
             <div class="file-title">{{ filename }}</div>
-            <p style="color: var(--gray-600); margin: 0;">
+            <p style="color: var(--text-secondary); margin: 0;">
                 {% if records %}
                     {{ records|length }} analysis{{ "es" if records|length != 1 else "" }} found
                 {% else %}
@@ -314,6 +296,7 @@
                     </a>
                     <form method="POST" action="{{ url_for('delete_scan', scan_id=record.id) }}" style="display: inline;" 
                           onsubmit="return confirm('Are you sure you want to delete this analysis record?')">
+                        <input type="hidden" name="redirect_to" value="{{ url_for('file_records', filename=filename) }}">
                         <button type="submit" class="btn btn-danger">Delete</button>
                     </form>
                 </div>

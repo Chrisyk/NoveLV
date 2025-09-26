@@ -109,7 +109,7 @@ def create_app(test_config=None):
     # Yomitan API configuration
     YOMITAN_API_URL = "http://127.0.0.1:19633"
     YOMITAN_API_TIMEOUT = 100  # Increased timeout for Yomitan API processing
-    YOMITAN_CHUNK_SIZE = 2000  # Maximum characters per API request chunk
+    YOMITAN_CHUNK_SIZE = 300  # Maximum characters per API request chunk
 
     # ============================================
     # MULTI-DICTIONARY FREQUENCY SYSTEM
@@ -1290,123 +1290,6 @@ def create_app(test_config=None):
             }
         }
 
-    def create_highlighted_text_from_analysis(analysis_results, text_content, vocabulary_set):
-        """
-        Create highlighted text using cached analysis results to avoid re-tokenization.
-        Much faster than re-scanning the entire text.
-        """
-        import html
-        
-        # Create a lookup dictionary for quick word-to-status mapping
-        word_status = {}
-        
-        # Process known words
-        for word_info in analysis_results.get('known_words', []):
-            word = word_info['word']
-            word_status[word] = 'known'
-        
-        # Process unknown words  
-        for word_info in analysis_results.get('unknown_words', []):
-            word = word_info['word']
-            word_status[word] = 'unknown'
-        
-        # Split text into paragraphs to preserve structure
-        paragraphs = text_content.split('\n')
-        highlighted_paragraphs = []
-        
-        for paragraph in paragraphs:
-            if not paragraph.strip():
-                highlighted_paragraphs.append('')
-                continue
-                
-            try:
-                # Use Yomitan API for tokenization (still needed for paragraph structure)
-                words, success = tokenize_with_yomitan_api(paragraph)
-                
-                if not success or not words:
-                    # Fallback: return plain text if Yomitan fails
-                    highlighted_paragraphs.append(html.escape(paragraph))
-                    continue
-                
-                # Apply filtering to remove symbols and junk tokens
-                filtered_words = filter_japanese_tokens(words)
-                
-                # Create highlighted HTML using cached analysis results when possible
-                highlighted_words = []
-                for word in filtered_words:
-                    escaped_word = html.escape(word)
-                    
-                    # Check cached analysis first, fallback to direct vocab lookup
-                    if word in word_status:
-                        if word_status[word] == 'known':
-                            highlighted_words.append(f'<span class="known-word">{escaped_word}</span>')
-                        else:
-                            highlighted_words.append(f'<span class="unknown-word">{escaped_word}</span>')
-                    else:
-                        # Fallback: direct vocabulary lookup for words not in analysis
-                        if word in vocabulary_set:
-                            highlighted_words.append(f'<span class="known-word">{escaped_word}</span>')
-                        else:
-                            highlighted_words.append(f'<span class="unknown-word">{escaped_word}</span>')
-                
-                highlighted_paragraphs.append(''.join(highlighted_words))
-                
-            except Exception as e:
-                print(f"Error highlighting paragraph: {e}")
-                # Fallback: return plain text for this paragraph
-                highlighted_paragraphs.append(html.escape(paragraph))
-        
-        return highlighted_paragraphs
-
-    def create_highlighted_text(text_content, vocabulary_set):
-        """
-        HTML highlighting using Yomitan API tokenization
-        Green = known, Red = unknown
-        Uses simple one-to-one vocabulary matching for accuracy
-        """
-        import html
-        
-        # Split text into paragraphs to preserve structure
-        paragraphs = text_content.split('\n')
-        highlighted_paragraphs = []
-        
-        for paragraph in paragraphs:
-            if not paragraph.strip():
-                highlighted_paragraphs.append('')
-                continue
-                
-            try:
-                # Use Yomitan API for tokenization with chunking support
-                words, success = tokenize_with_yomitan_api(paragraph)
-                
-                if not success or not words:
-                    # Fallback: return plain text if Yomitan fails
-                    highlighted_paragraphs.append(html.escape(paragraph))
-                    continue
-                
-                # Apply filtering to remove symbols and junk tokens
-                filtered_words = filter_japanese_tokens(words)
-                
-                # Create highlighted HTML using simple direct vocabulary matching
-                highlighted_words = []
-                for word in filtered_words:
-                    escaped_word = html.escape(word)
-                    
-                    # Simple one-to-one vocabulary comparison
-                    if word in vocabulary_set:
-                        highlighted_words.append(f'<span class="known-word">{escaped_word}</span>')
-                    else:
-                        highlighted_words.append(f'<span class="unknown-word">{escaped_word}</span>')
-                
-                highlighted_paragraphs.append(''.join(highlighted_words))
-                
-            except Exception as e:
-                print(f"Error highlighting paragraph: {e}")
-                # Fallback: return plain text for this paragraph
-                highlighted_paragraphs.append(html.escape(paragraph))
-        
-        return highlighted_paragraphs
-
     @app.route('/')
     def home():
         """Library home page - Show uploaded novels and vocabulary caches"""
@@ -1614,9 +1497,27 @@ def create_app(test_config=None):
         """Delete a scan from history"""
         success = database.delete_scan(scan_id)
         if success:
-            flash('Scan deleted successfully', 'success')
+            flash('Analysis record deleted successfully', 'success')
         else:
-            flash('Failed to delete scan', 'error')
+            flash('Failed to delete analysis record', 'error')
+        
+        # Check for redirect parameter or use referrer to determine where to go back
+        redirect_to = request.form.get('redirect_to')
+        if redirect_to:
+            return redirect(redirect_to)
+        
+        # Check if we came from file_records page by looking at the referrer
+        referrer = request.referrer or ''
+        if 'file_records' in referrer:
+            # Extract filename from referrer URL to redirect back to the same file_records page
+            import re
+            from urllib.parse import unquote
+            match = re.search(r'/file_records/([^/?]+)', referrer)
+            if match:
+                filename = unquote(match.group(1))
+                return redirect(url_for('file_records', filename=filename))
+        
+        # Default to scan_history if we can't determine or came from there
         return redirect(url_for('scan_history'))
 
     @app.route('/progress_comparison')
@@ -2011,84 +1912,6 @@ def create_app(test_config=None):
             print(f"Error in get_ignored_words route: {e}")
             return {'success': False, 'error': str(e)}, 500
 
-    @app.route('/read/<filename>/<cache_key>')
-    def read_novel(filename, cache_key):
-        """Reading interface with color-coded vocabulary highlighting"""
-        file_path = os.path.join(novel_dir, filename)
-        if not os.path.exists(file_path):
-            flash('File not found', 'error')
-            return redirect(url_for('home'))
-        
-        # Find the matching cache
-        caches = get_available_caches()
-        selected_cache = None
-        for cache in caches:
-            if cache['key'] == cache_key:
-                selected_cache = cache
-                break
-        
-        if not selected_cache:
-            flash('Cache not found', 'error')
-            return redirect(url_for('home'))
-        
-        try:
-            # Read the novel file
-            with open(file_path, 'r', encoding='utf-8') as f:
-                text_content = f.read()
-            
-            # Load vocabulary from cache
-            cache_file_path = os.path.join(anki_manager.cache_dir, selected_cache['filename'])
-            with open(cache_file_path, 'r', encoding='utf-8') as f:
-                cache_data = json.load(f)
-            
-            # Extract vocabulary set
-            vocabulary_set = set()
-            for card_data in cache_data['cards'].values():
-                expr = card_data['expression'].strip()
-                if expr:
-                    vocabulary_set.add(expr)
-            
-            # Check if we have cached analysis results to avoid re-tokenization
-            cached_analysis = None
-            
-            # First check session for recent analysis
-            if 'analysis_results' in session:
-                session_results = session['analysis_results']
-                if (session_results.get('filename') == filename and 
-                    session_results.get('cache_info', {}).get('key') == cache_key):
-                    cached_analysis = session_results.get('analysis')
-                    print(f"🚀 Using cached analysis from session for faster highlighting")
-            
-            # Also check progress_tracker for recent completed analyses
-            if not cached_analysis:
-                for progress_id, progress_data in progress_tracker.items():
-                    if (progress_data.get('stage') == 'complete' and 
-                        'results' in progress_data):
-                        results = progress_data['results']
-                        if (results.get('filename') == filename and 
-                            results.get('cache_info', {}).get('key') == cache_key):
-                            cached_analysis = results.get('analysis')
-                            print(f"🚀 Using cached analysis from progress tracker for faster highlighting")
-                            break
-            
-            # Process text for highlighted reading - use cached analysis if available
-            if cached_analysis:
-                highlighted_text = create_highlighted_text_from_analysis(cached_analysis, text_content, vocabulary_set)
-                print(f"✅ Fast highlighting using cached tokenization")
-            else:
-                highlighted_text = create_highlighted_text(text_content, vocabulary_set)
-                print(f"⚠️ Slow highlighting - no cached analysis found, re-tokenizing text")
-            
-            return render_template('reading_interface.html',
-                                 filename=filename,
-                                 cache_info=selected_cache,
-                                 highlighted_text=highlighted_text,
-                                 vocabulary_size=len(vocabulary_set))
-        
-        except Exception as e:
-            flash(f'Error loading reading interface: {str(e)}', 'error')
-            return redirect(url_for('home'))
-
     @app.route('/cover/<filename>')
     def serve_cover(filename):
         """Serve cover image files"""
@@ -2267,5 +2090,95 @@ def create_app(test_config=None):
 
         return render_template('cache_status.html', cache_info=cache_info)
 
+    @app.route('/delete_cache', methods=['POST'])
+    def delete_cache():
+        """Delete a vocabulary cache"""
+        note_type = request.form.get('note_type')
+        field_name = request.form.get('field_name')
+        
+        if not note_type or not field_name:
+            flash('Invalid cache selection', 'error')
+            return redirect(url_for('settings'))
+        
+        try:
+            # Get cache filenames
+            json_file, pickle_file = anki_manager.get_cache_filename(note_type, field_name)
+            
+            # Delete both files if they exist
+            deleted_files = []
+            if os.path.exists(json_file):
+                os.remove(json_file)
+                deleted_files.append('JSON cache')
+            if os.path.exists(pickle_file):
+                os.remove(pickle_file)
+                deleted_files.append('Pickle cache')
+            
+            if deleted_files:
+                flash(f'Successfully deleted {", ".join(deleted_files)} for {note_type} - {field_name}', 'success')
+            else:
+                flash(f'No cache files found for {note_type} - {field_name}', 'warning')
+                
+        except Exception as e:
+            flash(f'Error deleting cache: {str(e)}', 'error')
+            
+        return redirect(url_for('settings'))
+
+    @app.route('/clear_all_caches', methods=['POST'])
+    def clear_all_caches():
+        """Delete all vocabulary caches"""
+        try:
+            deleted_count = 0
+            deleted_files = []
+            
+            if os.path.exists(anki_manager.cache_dir):
+                for file in os.listdir(anki_manager.cache_dir):
+                    if file.endswith(('.json', '.pkl')) and not file in ['ignored_words.json', 'scan_history.db']:
+                        file_path = os.path.join(anki_manager.cache_dir, file)
+                        try:
+                            os.remove(file_path)
+                            deleted_files.append(file)
+                            deleted_count += 1
+                        except Exception as e:
+                            print(f"Error deleting {file}: {e}")
+            
+            if deleted_count > 0:
+                flash(f'Successfully deleted {deleted_count} cache files', 'success')
+            else:
+                flash('No cache files found to delete', 'warning')
+                
+        except Exception as e:
+            flash(f'Error clearing caches: {str(e)}', 'error')
+            
+        return redirect(url_for('settings'))
+
+    @app.route('/view_cache_expressions')
+    def view_cache_expressions():
+        """View all expressions in a vocabulary cache"""
+        note_type = request.args.get('note_type')
+        field_name = request.args.get('field_name')
+        
+        if not note_type or not field_name:
+            flash('Note type and field name are required', 'error')
+            return redirect(url_for('settings'))
+        
+        try:
+            # Get expressions from cache
+            expressions = anki_manager.get_expressions(note_type, field_name, update_cache=False)
+            cache_data = anki_manager.load_cache(note_type, field_name)
+            
+            if not expressions:
+                flash(f'No expressions found in cache for {note_type} - {field_name}', 'warning')
+                return redirect(url_for('settings'))
+            
+            return render_template('view_cache_expressions.html',
+                                 note_type=note_type,
+                                 field_name=field_name,
+                                 expressions=expressions,
+                                 total_expressions=len(expressions),
+                                 cache_info=cache_data['metadata'] if cache_data else None)
+            
+        except Exception as e:
+            flash(f'Error loading expressions: {str(e)}', 'error')
+            return redirect(url_for('settings'))
     
     return app

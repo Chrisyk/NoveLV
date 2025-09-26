@@ -300,9 +300,6 @@
                                         <a href="{{ url_for('analyze_novel', filename=novel.filename) }}" class="btn btn-primary btn-sm">
                                             📊 Analyze
                                         </a>
-                                        <a href="{{ url_for('read_novel', filename=novel.filename, cache_key=caches[0].key) }}" class="btn btn-outline btn-sm">
-                                            👁️ Read
-                                        </a>
                                     {% else %}
                                         <button class="btn btn-secondary btn-sm" disabled>
                                             📊 Need Vocab Setup
