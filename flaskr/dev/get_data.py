@@ -3,8 +3,11 @@ import requests
 import json
 import pickle
 import os
+import logging
 from datetime import datetime
 from typing import Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 class AnkiDataManager:
     def __init__(self, cache_dir: str = "data"):
@@ -51,16 +54,16 @@ class AnkiDataManager:
             try:
                 with open(pickle_file, 'rb') as f:
                     return pickle.load(f)
-            except:
-                pass
+            except (pickle.UnpicklingError, EOFError, OSError) as exc:
+                logger.warning("Failed loading pickle cache %s: %s", pickle_file, exc)
         
         # Fallback to JSON
         if os.path.exists(json_file):
             try:
                 with open(json_file, 'r', encoding='utf-8') as f:
                     return json.load(f)
-            except:
-                pass
+            except (OSError, json.JSONDecodeError, ValueError, TypeError) as exc:
+                logger.warning("Failed loading JSON cache %s: %s", json_file, exc)
         
         # Return empty structure if no cache
         return {
@@ -100,7 +103,7 @@ class AnkiDataManager:
                 dt = datetime.fromisoformat(last_check_time.replace('Z', '+00:00'))
                 timestamp = int(dt.timestamp())
                 query = f'note:"{note_type}" edited:{timestamp}'
-            except:
+            except ValueError:
                 query = f'note:"{note_type}"'
         
         card_ids_result = self.ankiConnectInvoke('findCards', 6, {'query': query})
