@@ -1,4 +1,5 @@
 import sqlite3
+import os
 import json
 import hashlib
 from datetime import datetime
@@ -8,6 +9,9 @@ DATABASE_PATH = 'data/scan_history.db'
 
 def get_db_connection():
     """Get database connection with row factory"""
+    db_dir = os.path.dirname(DATABASE_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
     conn = sqlite3.connect(DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn

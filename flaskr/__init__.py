@@ -10,6 +10,7 @@ import requests
 import uuid
 import time
 import secrets
+import logging
 
 # Add the dev directory to Python path to import AnkiDataManager
 sys.path.append(os.path.join(os.path.dirname(__file__), 'dev'))
@@ -39,6 +40,10 @@ def create_app(test_config=None):
         YOMITAN_CHUNK_SIZE=int(os.environ.get("YOMITAN_CHUNK_SIZE", "300")),
         ANKI_CONNECT_URL=os.environ.get("ANKI_CONNECT_URL", "http://127.0.0.1:8765").rstrip("/"),
     )
+
+    if not logging.getLogger().handlers:
+        logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
+    app.logger.setLevel(logging.DEBUG if app.config.get("DEBUG") else logging.INFO)
     
     # Add number formatting filter
     @app.template_filter('number_format')
@@ -110,8 +115,8 @@ def create_app(test_config=None):
                                 'total_cards': data['metadata'].get('total_cards', 0),
                                 'key': f"{data['metadata'].get('note_type', 'Unknown')}_{data['metadata'].get('field_name', 'Unknown')}"
                             })
-                    except:
-                        pass
+                    except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+                        app.logger.warning("Skipping invalid cache file %s: %s", file, exc)
         return caches
 
     # Yomitan / Anki API configuration (from app.config)
@@ -1806,8 +1811,8 @@ def create_app(test_config=None):
                             text_content=text_content,
                             filename=filename
                         )
-                    except Exception as e:
-                        pass  # Save operation failed, but analysis completed successfully
+                    except Exception:
+                        app.logger.exception("Failed to persist scan result for %s", filename)
                     
                     # Store results in a way that doesn't require session context
                     # We'll use the progress_tracker to store results temporarily
@@ -1823,6 +1828,7 @@ def create_app(test_config=None):
                     }
                     
                 except Exception as e:
+                    app.logger.exception("Background analysis failed for %s", filename)
                     progress_tracker[progress_id] = {
                         'stage': 'error',
                         'message': f'Analysis failed: {str(e)}',
@@ -1891,7 +1897,7 @@ def create_app(test_config=None):
                 return {'success': False, 'error': 'Failed to save ignored word'}, 500
                 
         except Exception as e:
-            print(f"Error in ignore_word route: {e}")
+            app.logger.exception("Error in ignore_word route")
             return {'success': False, 'error': str(e)}, 500
     
     @app.route('/unignore_word', methods=['POST'])
@@ -1915,7 +1921,7 @@ def create_app(test_config=None):
                 return {'success': False, 'error': 'Failed to remove ignored word'}, 500
                 
         except Exception as e:
-            print(f"Error in unignore_word route: {e}")
+            app.logger.exception("Error in unignore_word route")
             return {'success': False, 'error': str(e)}, 500
     
     @app.route('/ignored_words', methods=['GET'])
@@ -1929,7 +1935,7 @@ def create_app(test_config=None):
                 'count': len(ignored_words)
             }
         except Exception as e:
-            print(f"Error in get_ignored_words route: {e}")
+            app.logger.exception("Error in get_ignored_words route")
             return {'success': False, 'error': str(e)}, 500
 
     @app.route('/cover/<filename>')
@@ -2058,6 +2064,7 @@ def create_app(test_config=None):
                                  processing_time=processing_time)
 
         except Exception as e:
+            app.logger.exception("Error processing Anki data for note_type=%s field=%s", note_type, field)
             flash(f'Error processing data: {str(e)}', 'error')
             return redirect(url_for('home'))
 
@@ -2080,8 +2087,8 @@ def create_app(test_config=None):
                                 'last_updated': data['metadata'].get('last_updated', 'Never'),
                                 'total_cards': data['metadata'].get('total_cards', 0)
                             })
-                    except:
-                        pass
+                    except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+                        app.logger.warning("Skipping invalid cache metadata file %s: %s", file, exc)
 
         # Check if any cache exists
         cache_exists = len(cache_info) > 0
@@ -2091,6 +2098,7 @@ def create_app(test_config=None):
             note_types_result = anki_manager.ankiConnectInvoke('modelNamesAndIds', 6)
             note_types = list(note_types_result['result'].keys()) if note_types_result else []
         except Exception as e:
+            app.logger.exception("Failed to fetch note types in settings")
             note_types = []
 
         return render_template('settings.html', 
@@ -2117,8 +2125,8 @@ def create_app(test_config=None):
                                 'last_updated': data['metadata'].get('last_updated', 'Never'),
                                 'total_cards': data['metadata'].get('total_cards', 0)
                             })
-                    except:
-                        pass
+                    except (OSError, json.JSONDecodeError, KeyError, TypeError) as exc:
+                        app.logger.warning("Skipping invalid cache metadata file %s: %s", file, exc)
 
         return render_template('cache_status.html', cache_info=cache_info)
 
@@ -2151,6 +2159,7 @@ def create_app(test_config=None):
                 flash(f'No cache files found for {note_type} - {field_name}', 'warning')
                 
         except Exception as e:
+            app.logger.exception("Error deleting cache for note_type=%s field_name=%s", note_type, field_name)
             flash(f'Error deleting cache: {str(e)}', 'error')
             
         return redirect(url_for('settings'))
@@ -2171,7 +2180,7 @@ def create_app(test_config=None):
                             deleted_files.append(file)
                             deleted_count += 1
                         except Exception as e:
-                            print(f"Error deleting {file}: {e}")
+                            app.logger.warning("Error deleting cache file %s: %s", file, e)
             
             if deleted_count > 0:
                 flash(f'Successfully deleted {deleted_count} cache files', 'success')
@@ -2179,6 +2188,7 @@ def create_app(test_config=None):
                 flash('No cache files found to delete', 'warning')
                 
         except Exception as e:
+            app.logger.exception("Error clearing all caches")
             flash(f'Error clearing caches: {str(e)}', 'error')
             
         return redirect(url_for('settings'))
@@ -2210,6 +2220,7 @@ def create_app(test_config=None):
                                  cache_info=cache_data['metadata'] if cache_data else None)
             
         except Exception as e:
+            app.logger.exception("Error loading cache expressions for note_type=%s field_name=%s", note_type, field_name)
             flash(f'Error loading expressions: {str(e)}', 'error')
             return redirect(url_for('settings'))
     
