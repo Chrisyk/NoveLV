@@ -9,6 +9,7 @@ from datetime import datetime
 import requests
 import uuid
 import time
+import secrets
 
 # Add the dev directory to Python path to import AnkiDataManager
 sys.path.append(os.path.join(os.path.dirname(__file__), 'dev'))
@@ -27,9 +28,16 @@ active_yomitan_operations = 0
 
 def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
+    # SECRET_KEY: required for sessions; set FLASK_SECRET_KEY in production.
+    default_secret = "dev" if os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true", "yes") else secrets.token_hex(32)
     app.config.from_mapping(
-        SECRET_KEY='dev',
+        SECRET_KEY=os.environ.get("FLASK_SECRET_KEY", default_secret),
         MAX_CONTENT_LENGTH=16 * 1024 * 1024,  # 16MB max file size
+        DEBUG=os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true", "yes"),
+        YOMITAN_API_URL=os.environ.get("YOMITAN_API_URL", "http://127.0.0.1:19633").rstrip("/"),
+        YOMITAN_API_TIMEOUT=float(os.environ.get("YOMITAN_API_TIMEOUT", "100")),
+        YOMITAN_CHUNK_SIZE=int(os.environ.get("YOMITAN_CHUNK_SIZE", "300")),
+        ANKI_CONNECT_URL=os.environ.get("ANKI_CONNECT_URL", "http://127.0.0.1:8765").rstrip("/"),
     )
     
     # Add number formatting filter
@@ -106,10 +114,11 @@ def create_app(test_config=None):
                         pass
         return caches
 
-    # Yomitan API configuration
-    YOMITAN_API_URL = "http://127.0.0.1:19633"
-    YOMITAN_API_TIMEOUT = 100  # Increased timeout for Yomitan API processing
-    YOMITAN_CHUNK_SIZE = 300  # Maximum characters per API request chunk
+    # Yomitan / Anki API configuration (from app.config)
+    YOMITAN_API_URL = app.config["YOMITAN_API_URL"]
+    YOMITAN_API_TIMEOUT = app.config["YOMITAN_API_TIMEOUT"]
+    YOMITAN_CHUNK_SIZE = app.config["YOMITAN_CHUNK_SIZE"]
+    ANKI_CONNECT_URL = app.config["ANKI_CONNECT_URL"]
 
     # ============================================
     # MULTI-DICTIONARY FREQUENCY SYSTEM
@@ -748,7 +757,7 @@ def create_app(test_config=None):
         try:
             # Test Anki Connect by calling the version action
             response = requests.post(
-                "http://127.0.0.1:8765",
+                ANKI_CONNECT_URL,
                 json={
                     "action": "version",
                     "version": 6
@@ -1280,6 +1289,7 @@ def create_app(test_config=None):
             'unknown_word_count': unknown_word_count,
             'ignored_word_count': ignored_word_count,  # NEW: Include ignored word count
             'total_processed_words': total_processed_words,  # NEW: Words actually analyzed (excluding ignored)
+            'total_instances': sum(word_counts.values()),  # Total token occurrences (all tokens)
             'comprehension_rate': comprehension_rate,
             'difficulty_level': difficulty_level,
             'star_statistics': star_stats,  # NOW CONTAINS THREE CATEGORIES
@@ -1289,6 +1299,15 @@ def create_app(test_config=None):
                 'words_with_frequency': len([w for w in all_words_with_frequency if w['has_frequency']])
             }
         }
+
+    def _novel_delete_csrf_token():
+        """Session token for POST delete (CSRF for browser forms)."""
+        token = session.get("_novel_delete_csrf")
+        if not token:
+            token = secrets.token_urlsafe(32)
+            session["_novel_delete_csrf"] = token
+        return token
+
 
     @app.route('/')
     def home():
@@ -1327,7 +1346,8 @@ def create_app(test_config=None):
         return render_template('library_home.html', 
                              caches=caches, 
                              novels=novels,
-                             has_caches=len(caches) > 0)
+                             has_caches=len(caches) > 0,
+                             novel_delete_csrf=_novel_delete_csrf_token())
 
     @app.route('/health/yomitan')
     def yomitan_health():
@@ -1354,7 +1374,7 @@ def create_app(test_config=None):
             'message': status_message,
             'response_time_ms': response_time,
             'timestamp': datetime.now().isoformat(),
-            'anki_url': 'http://127.0.0.1:8765'
+            'anki_url': ANKI_CONNECT_URL
         }
 
     @app.route('/upload', methods=['POST'])
@@ -1922,13 +1942,25 @@ def create_app(test_config=None):
         """Download a novel file"""
         return send_from_directory(novel_dir, filename, as_attachment=True)
 
-    @app.route('/delete/<filename>')
+    @app.route('/delete/<filename>', methods=['POST'])
     def delete_novel(filename):
-        """Delete a novel file"""
-        file_path = os.path.join(novel_dir, filename)
+        """Delete a novel file (POST only; requires CSRF token)."""
+        token = request.form.get("csrf_token")
+        if not token or token != session.get("_novel_delete_csrf"):
+            flash('Invalid or missing security token. Please try again.', 'error')
+            return redirect(url_for('home'))
+        # Prevent path traversal: only allow basename under novel_dir
+        safe_name = os.path.basename(filename)
+        if safe_name != filename or not safe_name or safe_name in (".", ".."):
+            flash('Invalid file name', 'error')
+            return redirect(url_for('home'))
+        file_path = os.path.normpath(os.path.join(novel_dir, safe_name))
+        if not file_path.startswith(os.path.normpath(novel_dir) + os.sep) and file_path != os.path.normpath(novel_dir):
+            flash('Invalid file path', 'error')
+            return redirect(url_for('home'))
         if os.path.exists(file_path):
             os.remove(file_path)
-            flash(f'File "{filename}" deleted successfully', 'success')
+            flash(f'File "{safe_name}" deleted successfully', 'success')
         else:
             flash('File not found', 'error')
         return redirect(url_for('home'))

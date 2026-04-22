@@ -18,7 +18,7 @@ class AnkiDataManager:
     
     def ankiConnectInvoke(self, action: str, version: int, params: Dict = {}) -> Optional[Dict]:
         """Invoke AnkiConnect API"""
-        url = "http://127.0.0.1:8765"
+        url = os.environ.get("ANKI_CONNECT_URL", "http://127.0.0.1:8765").rstrip("/")
         payload = {'action': action, 'version': version, 'params': params or {}}
         response = requests.post(url, json=payload)
 

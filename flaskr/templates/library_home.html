@@ -262,7 +262,9 @@
                 </div>
             {% endif %}
         {% endwith %}
-        
+
+        <input type="hidden" id="novel-delete-csrf" value="{{ novel_delete_csrf }}">
+
         <!-- Hidden Upload Form -->
         <form id="upload-form" method="post" enctype="multipart/form-data" action="{{ url_for('upload_file') }}" style="display: none;">
             <input type="file" name="file" accept=".txt,.md,.epub" id="file-input" multiple>
@@ -310,7 +312,7 @@
                                         📋 Records
                                     </a>
                                     
-                                    <button onclick="deleteFile('{{ novel.filename }}')" class="btn btn-ghost btn-sm btn-danger">
+                                    <button type="button" onclick="deleteFile({{ novel.filename|tojson }})" class="btn btn-ghost btn-sm btn-danger">
                                         🗑️ Delete
                                     </button>
                                 </div>
@@ -332,9 +334,22 @@
     <script>
         // Delete file confirmation
         function deleteFile(filename) {
-            if (confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
-                window.location.href = `/delete/${filename}`;
+            if (!confirm(`Are you sure you want to delete "${filename}"? This action cannot be undone.`)) {
+                return;
             }
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/delete/' + encodeURIComponent(filename);
+            const csrf = document.getElementById('novel-delete-csrf');
+            if (csrf) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = 'csrf_token';
+                input.value = csrf.value;
+                form.appendChild(input);
+            }
+            document.body.appendChild(form);
+            form.submit();
         }
 
         // Upload functionality
